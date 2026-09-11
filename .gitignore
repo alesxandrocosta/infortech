@@ -1,0 +1,16 @@
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Dependencies and builds
+node_modules/
+dist/
+
+# Runtime data and generated backups
+backend/backups/
+backend/uploads/
+
+# Logs
+*.log
+npm-debug.log*
