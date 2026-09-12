@@ -118,6 +118,15 @@ async function initDatabase() {
     }
     await connection.query("ALTER TABLE services MODIFY COLUMN categoria ENUM('Troca', 'Reparo', 'Software', 'Diagnóstico', 'Limpeza', 'Manutenção', 'Formatação', 'Backup', 'Preventiva', 'Redes', 'Suporte', 'Outro') NOT NULL");
 
+    const [customerColumns] = await connection.query(
+      `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'customers'`,
+      [DB_NAME],
+    );
+    const customerColumnNames = customerColumns.map((column) => column.COLUMN_NAME);
+    if (!customerColumnNames.includes('cep')) await connection.query('ALTER TABLE customers ADD COLUMN cep VARCHAR(9) NULL AFTER endereco');
+    if (!customerColumnNames.includes('numero')) await connection.query('ALTER TABLE customers ADD COLUMN numero VARCHAR(20) NULL AFTER cep');
+    if (!customerColumnNames.includes('whatsapp')) await connection.query('ALTER TABLE customers ADD COLUMN whatsapp VARCHAR(20) NULL AFTER telefone');
+
     const [orderColumns] = await connection.query(
       `SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'service_orders'`,
       [DB_NAME],

@@ -2,6 +2,7 @@ const express = require('express');
 const { randomUUID } = require('crypto');
 const { query, queryOne, getTransaction } = require('../config/database');
 const { requireAuth, requireRoles } = require('../middleware/auth');
+const { notifyOrderStatus } = require('../services/whatsapp');
 
 const router = express.Router();
 router.use(requireAuth);
@@ -22,7 +23,7 @@ const statusTransitions = {
   'Retorno Assistência': ['Em Análise', 'Aguardando Aprovação'],
   'Desistência do Cliente': [],
 };
-const orderSelect = `SELECT so.id, so.protocolo_os AS protocolo, so.cliente_id, c.nome AS cliente, so.tecnico_id, tech.full_name AS tecnico,
+const orderSelect = `SELECT so.id, so.protocolo_os AS protocolo, so.cliente_id, c.nome AS cliente, c.telefone, c.whatsapp, so.tecnico_id, tech.full_name AS tecnico,
   so.atendente_id, so.status, so.orcamento_status, so.equipamento_marca, so.equipamento_modelo, so.equipamento_serie, so.equipamento_tipo,
   so.equipamento_modelo AS equipamento, so.defeito_relatado AS defeito, so.laudo_tecnico, so.servicos_realizados, so.garantia_servicos_dias, so.garantia_pecas_dias, so.estoque_baixado_em, so.data_abertura, so.data_previsao, so.valor_servico, so.taxa_analise, so.desconto_taxa_analise, so.valor_pecas, so.valor_total, oc.itens AS checklist,
   COALESCE((SELECT GROUP_CONCAT(osv.nome ORDER BY osv.nome SEPARATOR ', ') FROM os_services osv WHERE osv.os_id = so.id), '') AS servicos,
@@ -85,6 +86,16 @@ function assertStatusTransition(currentStatus, nextStatus) {
     error.statusCode = 409;
     error.code = 'INVALID_STATUS_TRANSITION';
     throw error;
+  }
+}
+
+async function notifyStatusChange(order, previousStatus, observacao) {
+  if (order.status === previousStatus) return null;
+  try {
+    return await notifyOrderStatus({ order: { ...order, observacao }, previousStatus });
+  } catch (error) {
+    console.error('WhatsApp status notification error:', error.message);
+    return { sent: false, skipped: false, reason: 'WHATSAPP_SEND_ERROR' };
   }
 }
 
@@ -177,6 +188,7 @@ router.put('/:id', requireRoles('admin', 'gerente', 'atendente', 'tecnico'), asy
   const cliente = String(req.body?.cliente || '').trim();
   const equipamento = String(req.body?.equipamento || '').trim();
   const defeito = String(req.body?.defeito || '').trim();
+  const observacao = String(req.body?.observacao || '').trim();
   if (!existing) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Ordem não encontrada.' } });
   if (!canAlterOrder(req.user, existing)) return res.status(403).json({ success: false, error: { code: 'ORDER_FORBIDDEN', message: 'Somente o técnico responsável ou um administrador pode alterar esta OS.' } });
   if (!cliente || !equipamento || !defeito) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Cliente, equipamento e defeito são obrigatórios.' } });
@@ -209,7 +221,8 @@ router.put('/:id', requireRoles('admin', 'gerente', 'atendente', 'tecnico'), asy
     [randomUUID(), req.params.id, status, req.user.id, req.user.full_name, String(req.body?.observacao || '').trim()],
   );
   const order = await queryOne(`${orderSelect} WHERE so.id = ?`, [req.params.id]);
-  return res.json({ success: true, data: order, message: 'Ordem atualizada com sucesso.' });
+  const whatsappNotification = await notifyStatusChange(order, existing.status, observacao);
+  return res.json({ success: true, data: order, notifications: { whatsapp: whatsappNotification }, message: 'Ordem atualizada com sucesso.' });
 });
 
 router.get('/:id/history', async (req, res) => {
@@ -221,7 +234,7 @@ router.get('/:id/history', async (req, res) => {
 });
 
 router.patch('/:id/status', requireRoles('admin', 'gerente', 'atendente', 'tecnico'), async (req, res) => {
-  const order = await queryOne('SELECT id, tecnico_id, status, orcamento_status, estoque_baixado_em FROM service_orders WHERE id = ?', [req.params.id]);
+  const order = await queryOne('SELECT so.id, so.protocolo_os AS protocolo, so.tecnico_id, so.status, so.orcamento_status, so.estoque_baixado_em, c.nome AS cliente, c.telefone, c.whatsapp FROM service_orders so JOIN customers c ON c.id = so.cliente_id WHERE so.id = ?', [req.params.id]);
   const status = String(req.body?.status || '').trim();
   const observacao = String(req.body?.observacao || '').trim();
   const laudoTecnico = req.body?.laudo_tecnico === undefined ? null : String(req.body.laudo_tecnico || '').trim();
@@ -251,7 +264,8 @@ router.patch('/:id/status', requireRoles('admin', 'gerente', 'atendente', 'tecni
     await transaction.commit();
   } catch (error) { await transaction.rollback(); throw error; } finally { await transaction.close(); }
   const updated = await queryOne(`${orderSelect} WHERE so.id = ?`, [req.params.id]);
-  return res.json({ success: true, data: updated, message: 'Progresso da OS atualizado com sucesso.' });
+  const whatsappNotification = await notifyStatusChange(updated, order.status, observacao);
+  return res.json({ success: true, data: updated, notifications: { whatsapp: whatsappNotification }, message: 'Progresso da OS atualizado com sucesso.' });
 });
 
 function buildContractContent(order) {

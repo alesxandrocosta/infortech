@@ -13,7 +13,7 @@ import CustomerPortal from './components/CustomerPortal';
 import SalesPage from './components/SalesPage';
 import './App.css';
 
-const emptyCustomerForm = { nome: '', tipo: 'PF', documento: '', telefone: '', email: '', status: 'Adimplente' };
+const emptyCustomerForm = { nome: '', tipo: 'PF', documento: '', telefone: '', whatsapp: '', email: '', endereco: '', numero: '', cep: '', status: 'Adimplente' };
 const emptyOrderForm = { cliente: '', cliente_id: '', tecnico: '', tecnico_id: '', equipamento: '', status: 'Recebido', orcamento_status: 'pendente', defeito: '', laudo_tecnico: '', servicos_realizados: '', etiquetas: 4, observacao: '', service_ids: [], part_items: [] };
 const emptyInventoryForm = { codigo: '', nome: '', categoria: 'Tela', estoque: 0, minimo: 0, preco: 0, specs: {} };
 const emptyServiceForm = { nome: '', categoria: 'Troca', modalidade: 'Presencial', descricao: '', notas: '', tempo: 1, preco: 0 };
@@ -77,6 +77,7 @@ function App() {
   const [statusMessage, setStatusMessage] = useState('Checklist pronto para revisão');
   const [customers, setCustomers] = useState([]);
   const [customerForm, setCustomerForm] = useState(emptyCustomerForm);
+  const [cepLoading, setCepLoading] = useState(false);
   const [orders, setOrders] = useState([]);
   const [orderForm, setOrderForm] = useState(emptyOrderForm);
   const [orderLabelQuantities, setOrderLabelQuantities] = useState({});
@@ -238,6 +239,29 @@ function App() {
     setCustomerForm((current) => ({ ...current, [name]: value }));
   };
 
+  const handleCepLookup = async (rawCep) => {
+    const cep = String(rawCep || '').replace(/\D/g, '');
+    if (cep.length !== 8) return;
+    setCepLoading(true);
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+      const address = await response.json();
+      if (address.erro) {
+        setStatusMessage('CEP não encontrado');
+        return;
+      }
+      setCustomerForm((current) => ({
+        ...current,
+        cep: `${cep.slice(0, 5)}-${cep.slice(5)}`,
+        endereco: [address.logradouro, address.bairro, address.localidade && address.uf ? `${address.localidade}/${address.uf}` : ''].filter(Boolean).join(', '),
+      }));
+    } catch {
+      setStatusMessage('Não foi possível consultar o CEP');
+    } finally {
+      setCepLoading(false);
+    }
+  };
+
   const handleOrderFormChange = (event) => {
     const { name, value } = event.target;
     if (name === 'cliente_id') {
@@ -276,8 +300,8 @@ function App() {
   const handleCustomerSubmit = async (event) => {
     event.preventDefault();
 
-    if (!customerForm.nome.trim() || !customerForm.documento.trim() || (!customerForm.telefone.trim() && !customerForm.email.trim())) {
-      setStatusMessage('Preencha nome, documento e telefone ou e-mail');
+    if (!customerForm.nome.trim() || !customerForm.documento.trim() || (!customerForm.telefone.trim() && !customerForm.whatsapp.trim() && !customerForm.email.trim())) {
+      setStatusMessage('Preencha nome, documento e telefone, WhatsApp ou e-mail');
       return;
     }
 
@@ -287,7 +311,11 @@ function App() {
         tipo: customerForm.tipo,
         documento: customerForm.documento,
         telefone: customerForm.telefone,
+        whatsapp: customerForm.whatsapp,
         email: customerForm.email,
+        endereco: customerForm.endereco,
+        numero: customerForm.numero,
+        cep: customerForm.cep,
         status: customerForm.status,
       };
       const response = customersEditingId
@@ -365,8 +393,11 @@ function App() {
     try {
       const response = await api.patch(`/orders/${orderId}/status`, { status, observacao });
       setOrders((current) => current.map((order) => order.id === orderId ? response.data : order));
-      setStatusMessage('Progresso registrado com sucesso');
-      return response.data;
+      const whatsappNotification = response.notifications?.whatsapp;
+      setStatusMessage(whatsappNotification?.sent
+        ? 'Progresso registrado e mensagem enviada pelo WhatsApp'
+        : 'Progresso registrado, mas a mensagem do WhatsApp não foi enviada');
+      return { order: response.data, whatsappNotification };
     } catch (error) {
       setStatusMessage(error.message || 'Não foi possível atualizar a OS');
       return false;
@@ -549,7 +580,7 @@ function App() {
 
   const handleEditCustomer = (customer) => {
     setCustomersEditingId(customer.id);
-    setCustomerForm({ nome: customer.nome || '', tipo: customer.tipo || 'PF', documento: customer.documento || '', telefone: customer.telefone || '', email: customer.email || '', status: customer.status || 'Adimplente' });
+    setCustomerForm({ nome: customer.nome || '', tipo: customer.tipo || 'PF', documento: customer.documento || '', telefone: customer.telefone || '', whatsapp: customer.whatsapp || '', email: customer.email || '', endereco: customer.endereco || '', numero: customer.numero || '', cep: customer.cep || '', status: customer.status || 'Adimplente' });
   };
 
   const handleDeleteCustomer = async (customerId) => {
@@ -709,6 +740,8 @@ function App() {
         onEdit={handleEditCustomer}
         onDelete={handleDeleteCustomer}
         onCancelEdit={() => { setCustomersEditingId(null); setCustomerForm(emptyCustomerForm); }}
+        onCepLookup={handleCepLookup}
+        cepLoading={cepLoading}
       />
     ),
     ordens: (

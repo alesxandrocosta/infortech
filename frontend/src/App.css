@@ -1192,6 +1192,21 @@
   grid-column: 1 / -1;
 }
 
+.inline-form-control {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.inline-form-control input {
+  min-width: 0;
+  flex: 1;
+}
+
+.inline-form-control .secondary-button {
+  white-space: nowrap;
+}
+
 .table-wrap {
   overflow-x: auto;
 }

@@ -10,6 +10,10 @@ dist/
 # Runtime data and generated backups
 backend/backups/
 backend/uploads/
+backend/.wwebjs_auth/
+backend/.wwebjs_cache/
+.wwebjs_auth/
+.wwebjs_cache/
 
 # Logs
 *.log

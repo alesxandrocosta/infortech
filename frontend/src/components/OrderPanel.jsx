@@ -2,6 +2,28 @@ import { useEffect, useState } from 'react';
 import { checklistStatusOptions } from '../data/checklist';
 
 const columns = ['Recebido', 'Aguardando Análise', 'Em Análise', 'Aguardando Peça', 'Aguardando Aprovação', 'Aprovado', 'Em Execução', 'Concluído', 'Finalizado', 'Entregue', 'Retorno Assistência', 'Desistência do Cliente'];
+const statusTransitions = {
+  Recebido: ['Aguardando Análise', 'Em Análise', 'Desistência do Cliente'],
+  'Aguardando Análise': ['Em Análise', 'Desistência do Cliente'],
+  'Em Análise': ['Aguardando Peça', 'Aguardando Aprovação', 'Desistência do Cliente'],
+  'Aguardando Peça': ['Aguardando Aprovação', 'Em Análise', 'Desistência do Cliente'],
+  'Aguardando Aprovação': ['Aprovado', 'Desistência do Cliente'],
+  Aprovado: ['Em Execução', 'Desistência do Cliente'],
+  'Em Execução': ['Concluído', 'Retorno Assistência'],
+  Concluído: ['Finalizado', 'Retorno Assistência'],
+  Finalizado: ['Entregue', 'Retorno Assistência'],
+  Entregue: ['Retorno Assistência'],
+  'Retorno Assistência': ['Em Análise', 'Aguardando Aprovação'],
+  'Desistência do Cliente': [],
+};
+
+function getWhatsAppFeedback(notification) {
+  if (notification?.sent) return 'Mensagem enviada com sucesso pelo WhatsApp.';
+  if (notification?.reason === 'CUSTOMER_PHONE_NOT_FOUND') return 'Status atualizado, mas o cliente não possui telefone ou WhatsApp cadastrado.';
+  if (notification?.reason === 'WHATSAPP_SEND_ERROR') return 'Status atualizado, mas ocorreu um erro ao enviar a mensagem pelo WhatsApp.';
+  if (notification?.reason?.startsWith('WHATSAPP_WEB_')) return 'Status atualizado, mas o WhatsApp não está conectado.';
+  return 'Status atualizado, mas a mensagem do WhatsApp não foi enviada.';
+}
 
 export default function OrderPanel({ orders, form, services, parts, customers, users, checklist, editingId, labelQuantities, onChange, onSubmit, onEdit, onDelete, onCancelEdit, onPrintLabels, onProgressUpdate, onClaimNext, onGetContract, currentUserRole, onChecklistStatusChange, onChecklistAddItem, onChecklistRemoveItem, onLoadHistory }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -24,14 +46,18 @@ export default function OrderPanel({ orders, form, services, parts, customers, u
 
   const changePhase = async (status) => {
     if (!detailsOrder || detailsOrder.status === status || updatingPhase) return;
+    if (!statusTransitions[detailsOrder.status]?.includes(status)) {
+      setPhaseMessage(`Transição inválida: ${detailsOrder.status} -> ${status}`);
+      return;
+    }
     setUpdatingPhase(true);
     setPhaseMessage('');
-    const updatedOrder = await onProgressUpdate(detailsOrder.id, status, `Status alterado para ${status}.`);
-    if (updatedOrder) {
-      setDetailsOrder(updatedOrder);
-      setHistory(await onLoadHistory(updatedOrder.id));
+    const updateResult = await onProgressUpdate(detailsOrder.id, status, `Status alterado para ${status}.`);
+    if (updateResult?.order) {
+      setDetailsOrder(updateResult.order);
+      setHistory(await onLoadHistory(updateResult.order.id));
       setDetailsTab('historico');
-      setPhaseMessage(`Status atualizado para ${status}.`);
+      setPhaseMessage(getWhatsAppFeedback(updateResult.whatsappNotification));
     } else {
       setPhaseMessage('Não foi possível atualizar o status.');
     }
@@ -133,7 +159,7 @@ export default function OrderPanel({ orders, form, services, parts, customers, u
           <div className="order-assignee"><span className="eyebrow">Técnico responsável</span><strong>{order.tecnico || 'Sem técnico'}</strong></div>
           <span className="status-pill neutral">{order.status}</span>
           <div className="table-actions"><button className="primary-button" type="button" onClick={(event) => { event.stopPropagation(); openDetails(order); }}>Ver detalhes</button><button className="secondary-button" type="button" onClick={(event) => { event.stopPropagation(); onEdit(order); setIsFormOpen(true); }}>Editar</button><button className="secondary-button" type="button" onClick={(event) => { event.stopPropagation(); onPrintLabels(order, labelQuantities[order.id] || 4); }}>Etiquetas</button><button className="secondary-button" type="button" onClick={async (event) => { event.stopPropagation(); const response = await onGetContract(order.id); if (response?.contract) setContract(response); }}>Contrato</button><button className="ghost-button" type="button" onClick={(event) => { event.stopPropagation(); onDelete(order.id); }}>Excluir</button></div>
-        </article>)}
+          </article>)}
         {!orders.length && <div className="empty-state">Nenhuma ordem de serviço cadastrada.</div>}
       </div>
 

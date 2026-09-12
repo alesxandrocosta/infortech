@@ -6,7 +6,8 @@
   "scripts": {
     "install:all": "npm install --prefix backend && npm install --prefix frontend && npm install",
     "dev": "concurrently --kill-others-on-fail --names backend,frontend --prefix-colors blue,green \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
-    "start": "concurrently --kill-others-on-fail --names backend,frontend --prefix-colors blue,green \"npm start --prefix backend\" \"npm run preview --prefix frontend\"",
+    "restart": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/restart.ps1",
+    "start": "npm run restart",
     "build": "npm run build --prefix frontend",
     "lint": "npm run lint --prefix frontend && npm run lint --prefix backend",
     "init-db": "npm run init-db --prefix backend"

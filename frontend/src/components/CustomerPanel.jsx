@@ -1,4 +1,4 @@
-export default function CustomerPanel({ customers, form, editingId, onChange, onSubmit, onEdit, onDelete, onCancelEdit }) {
+export default function CustomerPanel({ customers, form, editingId, onChange, onSubmit, onEdit, onDelete, onCancelEdit, onCepLookup, cepLoading }) {
   return (
     <section className="panel form-panel">
       <div className="panel-header">
@@ -33,9 +33,34 @@ export default function CustomerPanel({ customers, form, editingId, onChange, on
             <input name="telefone" value={form.telefone} onChange={onChange} placeholder="(11) 99999-0000" required={ !form.email.trim() } />
           </label>
 
+          <label>
+            WhatsApp
+            <input name="whatsapp" value={form.whatsapp} onChange={onChange} placeholder="(11) 99999-0000" />
+          </label>
+
           <label className="full-width">
             E-mail
             <input name="email" type="email" value={form.email} onChange={onChange} placeholder="cliente@email.com" required={ !form.telefone.trim() } />
+          </label>
+
+          <label>
+            CEP
+            <div className="inline-form-control">
+              <input name="cep" value={form.cep} onChange={onChange} onBlur={() => onCepLookup(form.cep)} placeholder="00000-000" inputMode="numeric" />
+              <button className="secondary-button" type="button" onClick={() => onCepLookup(form.cep)} disabled={cepLoading}>
+                {cepLoading ? 'Consultando...' : 'Consultar'}
+              </button>
+            </div>
+          </label>
+
+          <label>
+            Número da casa
+            <input name="numero" value={form.numero} onChange={onChange} placeholder="123" />
+          </label>
+
+          <label className="full-width">
+            Endereço
+            <input name="endereco" value={form.endereco} onChange={onChange} placeholder="Rua, avenida ou logradouro" />
           </label>
 
           <label>

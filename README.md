@@ -72,6 +72,29 @@ npm run dev
 O frontend ficará disponível em `http://0.0.0.0:5173/` e a API em `http://localhost:5000`.
 Para encerrar os dois serviços, pressione `Ctrl+C` no mesmo terminal.
 
+### Cadastro e avisos por WhatsApp Web
+
+O cadastro de clientes possui telefone, WhatsApp, CEP, número da casa e endereço. O CEP é consultado automaticamente pelo ViaCEP.
+Para aplicar os novos campos em um banco existente, execute `npm run init-db` no diretório raiz.
+
+As atualizações de status da OS podem ser enviadas pela sessão do WhatsApp Web da máquina. Na primeira execução, o backend abrirá uma janela do WhatsApp Web e exibirá um QR Code no terminal caso ainda não exista uma sessão vinculada:
+
+```env
+WHATSAPP_WEB_HEADLESS=false
+```
+
+Após o primeiro vínculo, a sessão fica salva em `backend/.wwebjs_auth` e será reutilizada nos próximos inícios. Sem uma sessão pronta ou sem telefone no cadastro, a OS continua sendo atualizada normalmente e o envio é ignorado.
+
+### Reiniciar com um único comando
+
+Para encerrar automaticamente processos antigos nas portas do sistema e iniciar backend e frontend novamente:
+
+```bash
+npm run restart
+```
+
+Esse comando não solicita confirmação e encerra somente os processos que estiverem usando as portas `5000` e `5173`.
+
 ### Passo 1: Clonar e Entrar no Diretório
 
 ```bash

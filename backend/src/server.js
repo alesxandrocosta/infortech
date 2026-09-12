@@ -13,6 +13,7 @@ const customerPortalRoutes = require('./routes/customerPortal');
 const salesRoutes = require('./routes/sales');
 const dashboardRoutes = require('./routes/dashboard');
 const { requireAuth, requireRoles } = require('./middleware/auth');
+const { getWhatsAppStatus, initializeWhatsApp } = require('./services/whatsapp');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -72,6 +73,7 @@ app.get('/api/health', (_req, res) => {
     success: true,
     service: 'TechFlow ERP',
     status: 'online',
+    whatsapp: getWhatsAppStatus(),
     timestamp: new Date().toISOString(),
   });
 });
@@ -104,6 +106,8 @@ app.use((error, _req, res, _next) => {
     error: { code: error.code || 'INTERNAL_ERROR', message: 'Erro interno ao processar a solicitação.' },
   });
 });
+
+initializeWhatsApp();
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`TechFlow ERP backend running on http://0.0.0.0:${port}`);
