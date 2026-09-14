@@ -9,6 +9,13 @@ router.use(requireAuth);
 
 const allowedStatuses = ['Recebido', 'Aguardando Análise', 'Em Análise', 'Aguardando Peça', 'Aguardando Aprovação', 'Aprovado', 'Em Execução', 'Concluído', 'Finalizado', 'Entregue', 'Retorno Assistência', 'Desistência do Cliente'];
 const allowedBudgetStatuses = ['pendente', 'aprovado', 'recusado'];
+const hardwareFields = ['hwid_equipamento', 'serial_bios', 'uuid_sistema', 'mac_rede', 'serial_disco'];
+const hardwareLabels = {
+  serial_bios: 'Placa-mãe alterada (Serial BIOS divergente)',
+  uuid_sistema: 'Placa-mãe alterada (UUID divergente)',
+  mac_rede: 'Interface de rede alterada (MAC divergente)',
+  serial_disco: 'SSD substituído (Serial do disco divergente)',
+};
 const statusTransitions = {
   Recebido: ['Aguardando Análise', 'Em Análise', 'Desistência do Cliente'],
   'Aguardando Análise': ['Em Análise', 'Desistência do Cliente'],
@@ -25,10 +32,52 @@ const statusTransitions = {
 };
 const orderSelect = `SELECT so.id, so.protocolo_os AS protocolo, so.cliente_id, c.nome AS cliente, c.telefone, c.whatsapp, so.tecnico_id, tech.full_name AS tecnico,
   so.atendente_id, so.status, so.orcamento_status, so.equipamento_marca, so.equipamento_modelo, so.equipamento_serie, so.equipamento_tipo,
+  so.hwid_equipamento, so.serial_bios, so.uuid_sistema, so.mac_rede, so.serial_disco, so.especificacoes_json, so.hardware_validacao_status, so.hardware_divergencias_json, so.hardware_validado_em,
   so.equipamento_modelo AS equipamento, so.defeito_relatado AS defeito, so.laudo_tecnico, so.servicos_realizados, so.garantia_servicos_dias, so.garantia_pecas_dias, so.estoque_baixado_em, so.data_abertura, so.data_previsao, so.valor_servico, so.taxa_analise, so.desconto_taxa_analise, so.valor_pecas, so.valor_total, oc.itens AS checklist,
   COALESCE((SELECT GROUP_CONCAT(osv.nome ORDER BY osv.nome SEPARATOR ', ') FROM os_services osv WHERE osv.os_id = so.id), '') AS servicos,
   COALESCE((SELECT GROUP_CONCAT(CONCAT(oi.nome_item, ' (', oi.quantidade, 'x)') ORDER BY oi.nome_item SEPARATOR ', ') FROM os_items oi WHERE oi.os_id = so.id), '') AS pecas
   FROM service_orders so JOIN customers c ON c.id = so.cliente_id LEFT JOIN users tech ON tech.id = so.tecnico_id LEFT JOIN os_checklists oc ON oc.os_id = so.id`;
+
+function normalizeHardware(input = {}) {
+  const source = input.hardware || input;
+  const value = (key) => String(source[key] ?? '').trim() || null;
+  const hwid = value('hwid_equipamento') || value('ID_Equipamento');
+  return {
+    hwid_equipamento: hwid ? hwid.toUpperCase().slice(0, 16) : null,
+    serial_bios: value('serial_bios') || value('Serial_BIOS'),
+    uuid_sistema: value('uuid_sistema') || value('UUID_Sistema'),
+    mac_rede: value('mac_rede') || value('MAC_Rede'),
+    serial_disco: value('serial_disco') || value('Serial_Disco'),
+    especificacoes_json: source.especificacoes_json || {
+      Processador: source.Processador || null,
+      Memoria_RAM: source.Memoria_RAM || null,
+      Armazenamento: source.Armazenamento || null,
+      Data_Cadastro: source.Data_Cadastro || null,
+    },
+  };
+}
+
+function compareHardware(reference, received) {
+  if (!reference) return { status: 'sem_referencia', divergencias: [] };
+  const divergencias = [];
+  if (reference.hwid_equipamento !== received.hwid_equipamento) divergencias.push('ID único do hardware divergente');
+  for (const field of hardwareFields.slice(1)) {
+    if (reference[field] && received[field] && reference[field].toUpperCase() !== received[field].toUpperCase()) divergencias.push(hardwareLabels[field]);
+  }
+  return { status: divergencias.length ? 'divergente' : 'autentico', divergencias };
+}
+
+async function findHardwareReference(clienteId, currentOrderId) {
+  return queryOne(
+    `SELECT hwid_equipamento, serial_bios, uuid_sistema, mac_rede, serial_disco, created_at
+     FROM service_orders WHERE cliente_id = ? AND id <> ? AND hwid_equipamento IS NOT NULL
+     UNION ALL
+     SELECT hwid_equipamento, serial_bios, uuid_sistema, mac_rede, serial_disco, created_at
+     FROM sales WHERE customer_id = ? AND hwid_equipamento IS NOT NULL
+     ORDER BY created_at DESC LIMIT 1`,
+    [clienteId, currentOrderId || '', clienteId],
+  );
+}
 
 async function resolveCustomerId(body) {
   if (body.cliente_id) return queryOne('SELECT id FROM customers WHERE id = ?', [body.cliente_id]);
@@ -150,6 +199,7 @@ router.post('/', requireRoles('admin', 'gerente', 'atendente', 'tecnico'), async
   }
   const selectedServices = await resolveServices(req.body?.service_ids);
   const selectedParts = await resolveParts(req.body?.part_items);
+  const hardware = normalizeHardware(req.body);
   if (Array.isArray(req.body?.service_ids) && selectedServices.length !== req.body.service_ids.length) return res.status(400).json({ success: false, error: { code: 'SERVICE_NOT_FOUND', message: 'Um ou mais serviços selecionados não foram encontrados.' } });
   const totals = calculateBudgetTotals(status, budgetStatus, selectedServices, selectedParts);
 
@@ -160,9 +210,9 @@ router.post('/', requireRoles('admin', 'gerente', 'atendente', 'tecnico'), async
     const protocol = `OS-${String(counter[0].counter_value).padStart(5, '0')}`;
     const id = randomUUID();
     await transaction.query(
-      `INSERT INTO service_orders (id, protocolo_os, cliente_id, tecnico_id, atendente_id, status, orcamento_status, equipamento_modelo, equipamento_tipo, defeito_relatado, laudo_tecnico, servicos_realizados, garantia_servicos_dias, garantia_pecas_dias, valor_servico, taxa_analise, desconto_taxa_analise, valor_pecas, valor_total)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, protocol, customer.id, technician?.id || null, req.user.id, status, budgetStatus, equipamento, req.body?.equipamento_tipo || 'Não informado', defeito, String(req.body?.laudo_tecnico || '').trim() || null, String(req.body?.servicos_realizados || '').trim() || null, 30, 90, totals.valorServicos, totals.taxaAnalise, totals.descontoAnalise, totals.valorPecas, totals.valorTotal],
+      `INSERT INTO service_orders (id, protocolo_os, cliente_id, tecnico_id, atendente_id, status, orcamento_status, equipamento_modelo, equipamento_tipo, hwid_equipamento, serial_bios, uuid_sistema, mac_rede, serial_disco, especificacoes_json, defeito_relatado, laudo_tecnico, servicos_realizados, garantia_servicos_dias, garantia_pecas_dias, valor_servico, taxa_analise, desconto_taxa_analise, valor_pecas, valor_total)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, protocol, customer.id, technician?.id || null, req.user.id, status, budgetStatus, equipamento, req.body?.equipamento_tipo || 'Não informado', hardware.hwid_equipamento, hardware.serial_bios, hardware.uuid_sistema, hardware.mac_rede, hardware.serial_disco, JSON.stringify(hardware.especificacoes_json), defeito, String(req.body?.laudo_tecnico || '').trim() || null, String(req.body?.servicos_realizados || '').trim() || null, 30, 90, totals.valorServicos, totals.taxaAnalise, totals.descontoAnalise, totals.valorPecas, totals.valorTotal],
     );
     await transaction.query('INSERT INTO os_checklists (id, os_id, itens, observacoes) VALUES (?, ?, ?, ?)', [randomUUID(), id, JSON.stringify(Array.isArray(req.body?.checklist) ? req.body.checklist : []), String(req.body?.observacao || '').trim()]);
     for (const service of selectedServices) await transaction.query('INSERT INTO os_services (id, os_id, service_id, nome, categoria, preco, quantidade, is_custom) VALUES (?, ?, ?, ?, ?, ?, 1, FALSE)', [randomUUID(), id, service.id, service.nome, service.categoria, service.preco_sugerido]);
@@ -199,10 +249,11 @@ router.put('/:id', requireRoles('admin', 'gerente', 'atendente', 'tecnico'), asy
   const budgetStatus = allowedBudgetStatuses.includes(req.body?.orcamento_status) ? req.body.orcamento_status : existing.orcamento_status || 'pendente';
   const selectedServices = await resolveServices(req.body?.service_ids);
   const selectedParts = await resolveParts(req.body?.part_items);
+  const hardware = normalizeHardware(req.body);
   const totals = calculateBudgetTotals(status, budgetStatus, selectedServices, selectedParts);
   const transaction = await getTransaction();
   try {
-    await transaction.query('UPDATE service_orders SET cliente_id = ?, tecnico_id = ?, status = ?, orcamento_status = ?, equipamento_modelo = ?, equipamento_tipo = ?, defeito_relatado = ?, laudo_tecnico = ?, servicos_realizados = ?, valor_servico = ?, taxa_analise = ?, desconto_taxa_analise = ?, valor_pecas = ?, valor_total = ? WHERE id = ?', [customer.id, technician?.id || null, status, budgetStatus, equipamento, req.body?.equipamento_tipo || 'Não informado', defeito, String(req.body?.laudo_tecnico || '').trim() || null, String(req.body?.servicos_realizados || '').trim() || null, totals.valorServicos, totals.taxaAnalise, totals.descontoAnalise, totals.valorPecas, totals.valorTotal, req.params.id]);
+    await transaction.query('UPDATE service_orders SET cliente_id = ?, tecnico_id = ?, status = ?, orcamento_status = ?, equipamento_modelo = ?, equipamento_tipo = ?, hwid_equipamento = ?, serial_bios = ?, uuid_sistema = ?, mac_rede = ?, serial_disco = ?, especificacoes_json = ?, defeito_relatado = ?, laudo_tecnico = ?, servicos_realizados = ?, valor_servico = ?, taxa_analise = ?, desconto_taxa_analise = ?, valor_pecas = ?, valor_total = ? WHERE id = ?', [customer.id, technician?.id || null, status, budgetStatus, equipamento, req.body?.equipamento_tipo || 'Não informado', hardware.hwid_equipamento, hardware.serial_bios, hardware.uuid_sistema, hardware.mac_rede, hardware.serial_disco, JSON.stringify(hardware.especificacoes_json), defeito, String(req.body?.laudo_tecnico || '').trim() || null, String(req.body?.servicos_realizados || '').trim() || null, totals.valorServicos, totals.taxaAnalise, totals.descontoAnalise, totals.valorPecas, totals.valorTotal, req.params.id]);
     await transaction.query('DELETE FROM os_checklists WHERE os_id = ?', [req.params.id]);
     await transaction.query('INSERT INTO os_checklists (id, os_id, itens, observacoes) VALUES (?, ?, ?, ?)', [randomUUID(), req.params.id, JSON.stringify(Array.isArray(req.body?.checklist) ? req.body.checklist : []), String(req.body?.observacao || '').trim()]);
   await transaction.query('DELETE FROM os_services WHERE os_id = ?', [req.params.id]);
@@ -231,6 +282,25 @@ router.get('/:id/history', async (req, res) => {
     [req.params.id],
   );
   return res.json({ success: true, data: history, message: 'Histórico carregado com sucesso.' });
+});
+
+router.post('/:id/hardware-validation', requireRoles('admin', 'gerente', 'atendente', 'tecnico'), async (req, res) => {
+  const order = await queryOne('SELECT id, cliente_id FROM service_orders WHERE id = ?', [req.params.id]);
+  if (!order) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Ordem não encontrada.' } });
+  const hardware = normalizeHardware(req.body);
+  if (!hardware.hwid_equipamento) return res.status(400).json({ success: false, error: { code: 'HWID_REQUIRED', message: 'O JSON precisa conter ID_Equipamento.' } });
+  const reference = await findHardwareReference(order.cliente_id, order.id);
+  const validation = compareHardware(reference, hardware);
+  await query(
+    `UPDATE service_orders SET hwid_equipamento = ?, serial_bios = ?, uuid_sistema = ?, mac_rede = ?, serial_disco = ?, especificacoes_json = ?, hardware_validacao_status = ?, hardware_divergencias_json = ?, hardware_validado_em = CURRENT_TIMESTAMP WHERE id = ?`,
+    [hardware.hwid_equipamento, hardware.serial_bios, hardware.uuid_sistema, hardware.mac_rede, hardware.serial_disco, JSON.stringify(hardware.especificacoes_json), validation.status, JSON.stringify(validation.divergencias), order.id],
+  );
+  const updated = await queryOne(`${orderSelect} WHERE so.id = ?`, [order.id]);
+  return res.json({
+    success: true,
+    data: { order: updated, validation: { ...validation, reference_hwid: reference?.hwid_equipamento || null } },
+    message: validation.status === 'autentico' ? 'EQUIPAMENTO AUTÊNTICO - GARANTIA VÁLIDA.' : validation.status === 'divergente' ? 'ALERTA DE DIVERGÊNCIA - POSSÍVEL TROCA DE COMPONENTE.' : 'Hardware registrado sem histórico para comparação.',
+  });
 });
 
 router.patch('/:id/status', requireRoles('admin', 'gerente', 'atendente', 'tecnico'), async (req, res) => {

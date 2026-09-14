@@ -13,6 +13,20 @@ function calculateTax(subtotal) {
   return Number((subtotal * TAX_RATE).toFixed(2));
 }
 
+function normalizeHardware(input = {}) {
+  const source = input.hardware || input;
+  const value = (key) => String(source[key] ?? '').trim() || null;
+  const hwid = value('hwid_equipamento') || value('ID_Equipamento');
+  return {
+    hwid_equipamento: hwid ? hwid.toUpperCase().slice(0, 16) : null,
+    serial_bios: value('serial_bios') || value('Serial_BIOS'),
+    uuid_sistema: value('uuid_sistema') || value('UUID_Sistema'),
+    mac_rede: value('mac_rede') || value('MAC_Rede'),
+    serial_disco: value('serial_disco') || value('Serial_Disco'),
+    especificacoes_json: source.especificacoes_json || { Processador: source.Processador || null, Memoria_RAM: source.Memoria_RAM || null, Armazenamento: source.Armazenamento || null, Data_Cadastro: source.Data_Cadastro || null },
+  };
+}
+
 router.post('/', async (req, res) => {
   const items = Array.isArray(req.body?.items) ? req.body.items : [];
   const paymentMethod = String(req.body?.payment_method || 'Pix');
@@ -46,13 +60,19 @@ router.post('/', async (req, res) => {
   const changeAmount = paymentMethod === 'Dinheiro' ? Number((amountPaid - total).toFixed(2)) : 0;
   if (paymentMethod === 'Dinheiro' && (!Number.isFinite(amountPaid) || amountPaid < total)) return res.status(400).json({ success: false, error: { code: 'INSUFFICIENT_PAYMENT', message: 'O valor recebido é menor que o total da venda.' } });
   const saleId = randomUUID();
+  const hardware = normalizeHardware(req.body);
+  const customer = req.body?.customer_id
+    ? await queryOne('SELECT id, nome FROM customers WHERE id = ?', [req.body.customer_id])
+    : String(req.body?.customer_name || '').trim()
+      ? await queryOne('SELECT id, nome FROM customers WHERE nome = ? ORDER BY created_at DESC LIMIT 1', [String(req.body.customer_name).trim()])
+      : null;
   const transaction = await getTransaction();
 
   try {
     await transaction.query(
-      `INSERT INTO sales (id, customer_name, subtotal, tax_rate, tax_amount, total, amount_paid, change_amount, payment_method, pix_key, status, user_id, user_name)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?)`,
-      [saleId, String(req.body?.customer_name || '').trim() || null, subtotal, TAX_RATE, tax, total, amountPaid ?? total, changeAmount, paymentMethod, PIX_KEY, req.user.id, req.user.full_name],
+      `INSERT INTO sales (id, customer_name, customer_id, hwid_equipamento, serial_bios, uuid_sistema, mac_rede, serial_disco, especificacoes_json, subtotal, tax_rate, tax_amount, total, amount_paid, change_amount, payment_method, pix_key, status, user_id, user_name)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?)`,
+      [saleId, customer?.nome || String(req.body?.customer_name || '').trim() || null, customer?.id || null, hardware.hwid_equipamento, hardware.serial_bios, hardware.uuid_sistema, hardware.mac_rede, hardware.serial_disco, JSON.stringify(hardware.especificacoes_json), subtotal, TAX_RATE, tax, total, amountPaid ?? total, changeAmount, paymentMethod, PIX_KEY, req.user.id, req.user.full_name],
     );
     for (const item of saleItems) {
       await transaction.query(

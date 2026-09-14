@@ -5,6 +5,59 @@
   color: #e2e8f0;
 }
 
+.hardware-audit-panel {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0;
+  padding: 16px;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: 12px;
+  background: rgba(14, 116, 144, 0.08);
+}
+
+.hardware-audit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hardware-audit-grid label {
+  display: grid;
+  gap: 5px;
+  color: #526771;
+  font-size: 11px;
+}
+
+.hardware-audit-grid input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border: 1px solid rgba(82, 103, 113, 0.25);
+  border-radius: 8px;
+  background: #fff;
+  color: #10222c;
+}
+
+.hardware-audit-specs {
+  color: #526771;
+  overflow-wrap: anywhere;
+}
+
+.hardware-validation-message {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.hardware-valid { color: #15803d; }
+.hardware-invalid { color: #b91c1c; }
+.hardware-invalid span { font-weight: 500; }
+
+.print-label > svg {
+  align-self: end;
+  margin: 1mm 0 2mm auto;
+}
+
 .sales-page {
   display: grid;
   gap: 20px;

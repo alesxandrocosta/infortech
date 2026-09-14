@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { checklistStatusOptions } from '../data/checklist';
+import HardwareAuditPanel from './HardwareAuditPanel';
 
 const columns = ['Recebido', 'Aguardando Análise', 'Em Análise', 'Aguardando Peça', 'Aguardando Aprovação', 'Aprovado', 'Em Execução', 'Concluído', 'Finalizado', 'Entregue', 'Retorno Assistência', 'Desistência do Cliente'];
 const statusTransitions = {
@@ -25,7 +26,7 @@ function getWhatsAppFeedback(notification) {
   return 'Status atualizado, mas a mensagem do WhatsApp não foi enviada.';
 }
 
-export default function OrderPanel({ orders, form, services, parts, customers, users, checklist, editingId, labelQuantities, onChange, onSubmit, onEdit, onDelete, onCancelEdit, onPrintLabels, onProgressUpdate, onClaimNext, onGetContract, currentUserRole, onChecklistStatusChange, onChecklistAddItem, onChecklistRemoveItem, onLoadHistory }) {
+export default function OrderPanel({ orders, form, services, parts, customers, users, checklist, editingId, labelQuantities, onChange, onSubmit, onEdit, onDelete, onCancelEdit, onPrintLabels, onProgressUpdate, onClaimNext, onGetContract, currentUserRole, onChecklistStatusChange, onChecklistAddItem, onChecklistRemoveItem, onLoadHistory, onHardwareValidation }) {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [detailsOrder, setDetailsOrder] = useState(null);
   const [detailsTab, setDetailsTab] = useState('resumo');
@@ -152,6 +153,8 @@ export default function OrderPanel({ orders, form, services, parts, customers, u
         </div>
         <div className="form-actions"><button className="primary-button" type="submit">{editingId ? 'Atualizar OS' : 'Abrir OS'}</button>{editingId && <button className="secondary-button" type="button" onClick={onCancelEdit}>Cancelar edição</button>}</div>
       </form>}
+
+      <HardwareAuditPanel value={form.hardware} orderId={editingId} onValidate={onHardwareValidation} onChange={(hardware) => onChange({ target: { name: 'hardware', value: hardware } })} />
 
       <div className="orders-list">
         {orders.map((order) => <article className="order-row" key={order.id} onClick={() => openDetails(order)}>

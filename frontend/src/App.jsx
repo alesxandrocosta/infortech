@@ -14,7 +14,7 @@ import SalesPage from './components/SalesPage';
 import './App.css';
 
 const emptyCustomerForm = { nome: '', tipo: 'PF', documento: '', telefone: '', whatsapp: '', email: '', endereco: '', numero: '', cep: '', status: 'Adimplente' };
-const emptyOrderForm = { cliente: '', cliente_id: '', tecnico: '', tecnico_id: '', equipamento: '', status: 'Recebido', orcamento_status: 'pendente', defeito: '', laudo_tecnico: '', servicos_realizados: '', etiquetas: 4, observacao: '', service_ids: [], part_items: [] };
+const emptyOrderForm = { cliente: '', cliente_id: '', tecnico: '', tecnico_id: '', equipamento: '', status: 'Recebido', orcamento_status: 'pendente', defeito: '', laudo_tecnico: '', servicos_realizados: '', etiquetas: 4, observacao: '', service_ids: [], part_items: [], hardware: {} };
 const emptyInventoryForm = { codigo: '', nome: '', categoria: 'Tela', estoque: 0, minimo: 0, preco: 0, specs: {} };
 const emptyServiceForm = { nome: '', categoria: 'Troca', modalidade: 'Presencial', descricao: '', notas: '', tempo: 1, preco: 0 };
 const emptyUserForm = { full_name: '', telefone: '', email: '', username: '', password: '', marca: 'TechFlow', roles: ['tecnico'] };
@@ -356,6 +356,7 @@ function App() {
         observacao: orderForm.observacao || 'OS criada.',
         service_ids: orderForm.service_ids || [],
         part_items: orderForm.part_items || [],
+        hardware: orderForm.hardware || {},
         checklist,
       };
       const response = editingOrderId
@@ -368,7 +369,7 @@ function App() {
       setOrderForm(emptyOrderForm);
       setEditingOrderId(null);
       setStatusMessage(editingOrderId ? 'Ordem atualizada com sucesso' : 'Ordem de serviço criada com sucesso');
-    } catch {
+    } catch (error) {
       setStatusMessage(error.message || 'Não foi possível criar a ordem');
       return false;
     }
@@ -464,6 +465,7 @@ function App() {
       cliente: form.cliente,
       equipamento: form.equipamento,
       defeito: form.defeito,
+      hardware: form.hardware || {},
       status: 'Recebido',
       observacao: 'OS aberta na frente de loja.',
       etiquetas: 4,
@@ -473,6 +475,12 @@ function App() {
     });
     setOrders((current) => [response.data, ...current]);
     setStatusMessage('OS criada e enviada para a fila de atendimento');
+    return response.data;
+  };
+
+  const handleHardwareValidation = async (orderId, hardware) => {
+    const response = await api.post(`/orders/${orderId}/hardware-validation`, hardware);
+    if (response?.data?.order) setOrders((current) => current.map((order) => order.id === orderId ? response.data.order : order));
     return response.data;
   };
 
@@ -594,7 +602,7 @@ function App() {
 
   const handleEditOrder = (order) => {
     setEditingOrderId(order.id);
-    setOrderForm({ cliente: order.cliente || '', cliente_id: order.cliente_id || '', tecnico: order.tecnico || '', tecnico_id: order.tecnico_id || '', equipamento: order.equipamento || '', status: order.status || 'Recebido', orcamento_status: order.orcamento_status || 'pendente', defeito: order.defeito || '', laudo_tecnico: order.laudo_tecnico || '', servicos_realizados: order.servicos_realizados || '', observacao: '', etiquetas: orderLabelQuantities[order.id] || 4, service_ids: [], part_items: [] });
+    setOrderForm({ cliente: order.cliente || '', cliente_id: order.cliente_id || '', tecnico: order.tecnico || '', tecnico_id: order.tecnico_id || '', equipamento: order.equipamento || '', status: order.status || 'Recebido', orcamento_status: order.orcamento_status || 'pendente', defeito: order.defeito || '', laudo_tecnico: order.laudo_tecnico || '', servicos_realizados: order.servicos_realizados || '', observacao: '', etiquetas: orderLabelQuantities[order.id] || 4, service_ids: [], part_items: [], hardware: { hwid_equipamento: order.hwid_equipamento || '', serial_bios: order.serial_bios || '', uuid_sistema: order.uuid_sistema || '', mac_rede: order.mac_rede || '', serial_disco: order.serial_disco || '', especificacoes_json: order.especificacoes_json || {} } });
     if (Array.isArray(order.checklist) && order.checklist.length) setChecklist(order.checklist);
   };
 
@@ -765,6 +773,7 @@ function App() {
         onChecklistAddItem={handleAddItem}
         onChecklistRemoveItem={handleRemoveItem}
         onLoadHistory={handleLoadOrderHistory}
+        onHardwareValidation={handleHardwareValidation}
         services={services}
         parts={inventory}
         customers={customers}
