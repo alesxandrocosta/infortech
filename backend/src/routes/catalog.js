@@ -1,9 +1,12 @@
 const express = require('express');
 const { randomUUID } = require('crypto');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
 const { query, queryOne } = require('../config/database');
 const { requireAuth, requireRoles } = require('../middleware/auth');
 
 const router = express.Router();
+const execFileAsync = promisify(execFile);
 const serviceFields = 'id, nome, descricao, notas, categoria, modalidade, preco_sugerido, tempo_estimado_horas, ativo, created_at, updated_at';
 const partFields = 'id, codigo_sku, nome, categoria, condicao, equipamento_tipo, technical_specs, quantidade_estoque, quantidade_minima, preco_custo, preco_venda, ativo, created_at, updated_at';
 const serviceCategories = ['Troca', 'Reparo', 'Software', 'Diagnóstico', 'Limpeza', 'Manutenção', 'Formatação', 'Backup', 'Preventiva', 'Redes', 'Suporte', 'Outro'];
@@ -16,6 +19,58 @@ router.get('/inventory', async (req, res) => {
     part.movements = await query('SELECT origem, responsavel_nome, quantidade, valor, status, occurred_at FROM inventory_movements WHERE peca_id = ? ORDER BY occurred_at DESC', [part.id]);
   }
   return res.json({ success: true, data: parts, message: 'Estoque carregado com sucesso.' });
+});
+
+function processorGeneration(name) {
+  const intel = String(name || '').match(/(?:i[3579]|Core\(TM\) i[3579]).*?[- ](\d{4,5})/i);
+  if (intel) return `${intel[1].charAt(0)}ª geração`;
+  const ryzen = String(name || '').match(/Ryzen\s+[3579]\s+(\d)\d{3}/i);
+  return ryzen ? `${ryzen[1]}ª geração Ryzen` : 'Não identificada';
+}
+
+router.get('/inventory/hardware/local', requireRoles('admin', 'gerente', 'administrativo', 'atendente'), async (_req, res) => {
+  if (process.platform !== 'win32') return res.status(501).json({ success: false, error: { code: 'WINDOWS_REQUIRED', message: 'A leitura automática está disponível para o Windows.' } });
+  const script = `
+    $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1 Name, Manufacturer, NumberOfCores, MaxClockSpeed
+    $computer = Get-CimInstance Win32_ComputerSystem | Select-Object Manufacturer, Model, TotalPhysicalMemory
+    $os = Get-CimInstance Win32_OperatingSystem | Select-Object Caption, Version, OSArchitecture
+    $bios = Get-CimInstance Win32_BIOS | Select-Object SerialNumber
+    $uuid = (Get-CimInstance Win32_ComputerSystemProduct | Select-Object -First 1 UUID).UUID
+    $ram = @(Get-CimInstance Win32_PhysicalMemory | ForEach-Object { [PSCustomObject]@{ CapacityGB = [math]::Round($_.Capacity / 1GB, 2); TypeCode = $_.SMBIOSMemoryType; SpeedMHz = $_.Speed; Manufacturer = $_.Manufacturer; PartNumber = $_.PartNumber } })
+    $disks = @(Get-CimInstance Win32_DiskDrive | ForEach-Object { [PSCustomObject]@{ Model = $_.Model; SerialNumber = $_.SerialNumber; SizeGB = [math]::Round($_.Size / 1GB, 2); Interface = $_.InterfaceType } })
+    [PSCustomObject]@{ Cpu = $cpu; Computer = $computer; OperatingSystem = $os; Bios = $bios; Uuid = $uuid; Memory = $ram; Disks = $disks } | ConvertTo-Json -Depth 5 -Compress
+  `;
+  try {
+    const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script], { windowsHide: true, timeout: 15000, maxBuffer: 1024 * 1024 });
+    const raw = JSON.parse(stdout.trim());
+    const memoryTypes = { 20: 'DDR', 21: 'DDR2', 22: 'DDR2', 24: 'DDR3', 26: 'DDR4', 34: 'DDR5' };
+    const memory = Array.isArray(raw.Memory) ? raw.Memory : raw.Memory ? [raw.Memory] : [];
+    const disks = Array.isArray(raw.Disks) ? raw.Disks : raw.Disks ? [raw.Disks] : [];
+    const processor = raw.Cpu || {};
+    const totalMemory = Number(raw.Computer?.TotalPhysicalMemory || 0) / (1024 ** 3);
+    const result = {
+      ID_Equipamento: String(raw.Uuid || raw.Bios?.SerialNumber || '').replace(/-/g, '').slice(0, 16).toUpperCase(),
+      Serial_BIOS: raw.Bios?.SerialNumber || '',
+      UUID_Sistema: raw.Uuid || '',
+      Processador: processor.Name || '',
+      Geracao_Processador: processorGeneration(processor.Name),
+      Memoria_RAM: `${totalMemory ? totalMemory.toFixed(2) : ''} GB`,
+      Tipo_Memoria: [...new Set(memory.map((item) => memoryTypes[item.TypeCode] || `Código ${item.TypeCode || 'não informado'}`))].join(', '),
+      Modulos_Memoria: memory,
+      Sistema_Operacional: raw.OperatingSystem?.Caption || '',
+      Versao_SO: raw.OperatingSystem?.Version || '',
+      Arquitetura_SO: raw.OperatingSystem?.OSArchitecture || '',
+      Fabricante: raw.Computer?.Manufacturer || '',
+      Modelo: raw.Computer?.Model || '',
+      Armazenamento: disks.map((disk) => `${disk.Model || 'Disco'} ${disk.SizeGB || ''} GB`).join(' | '),
+      Discos: disks,
+      Data_Cadastro: new Date().toISOString(),
+    };
+    return res.json({ success: true, data: result, message: 'Configuração local lida com sucesso.' });
+  } catch (error) {
+    console.error('Local hardware read error:', error.message);
+    return res.status(502).json({ success: false, error: { code: 'HARDWARE_READ_ERROR', message: 'Não foi possível ler a configuração deste computador.' } });
+  }
 });
 
 router.post('/inventory/:id/movements', requireRoles('admin', 'gerente', 'administrativo', 'atendente'), async (req, res) => {

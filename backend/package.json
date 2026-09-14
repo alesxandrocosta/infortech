@@ -1,6 +1,6 @@
 {
   "name": "techflow-erp-backend",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "TechFlow ERP - Backend em Node.js + Express",
   "main": "src/server.js",
   "scripts": {

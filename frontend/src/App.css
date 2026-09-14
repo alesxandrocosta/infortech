@@ -49,6 +49,69 @@
   font-size: 12px;
 }
 
+.hardware-modal {
+  width: min(980px, calc(100% - 32px));
+}
+
+.hardware-modal-grid,
+.hardware-save-fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.hardware-modal-grid label,
+.hardware-save-fields label {
+  display: grid;
+  gap: 6px;
+  color: #526771;
+  font-size: 12px;
+}
+
+.hardware-modal-grid input,
+.hardware-save-fields input,
+.hardware-custom-add input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 11px;
+  border: 1px solid rgba(82, 103, 113, 0.25);
+  border-radius: 8px;
+  background: #fff;
+  color: #10222c;
+  font: inherit;
+}
+
+.hardware-modal-message {
+  margin: 12px 0 0;
+  color: #526771;
+}
+
+.hardware-custom-fields {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(82, 103, 113, 0.18);
+}
+
+.hardware-custom-add {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+}
+
+.hardware-custom-row {
+  display: grid;
+  grid-template-columns: minmax(120px, .6fr) minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: #eef0f2;
+  color: #354b5b;
+}
+
 .hardware-valid { color: #15803d; }
 .hardware-invalid { color: #b91c1c; }
 .hardware-invalid span { font-weight: 500; }

@@ -1,0 +1,68 @@
+import { useState } from 'react';
+
+const basicFields = [
+  ['ID_Equipamento', 'ID do equipamento'],
+  ['Fabricante', 'Fabricante'],
+  ['Modelo', 'Modelo'],
+  ['Processador', 'Processador'],
+  ['Geracao_Processador', 'Geração do processador'],
+  ['Memoria_RAM', 'Memória RAM'],
+  ['Tipo_Memoria', 'Tipo de memória'],
+  ['Sistema_Operacional', 'Sistema operacional'],
+  ['Versao_SO', 'Versão do sistema'],
+  ['Arquitetura_SO', 'Arquitetura'],
+  ['Serial_BIOS', 'Serial BIOS'],
+  ['UUID_Sistema', 'UUID do sistema'],
+  ['Armazenamento', 'Armazenamento'],
+];
+
+export default function LocalHardwareModal({ onClose, onRead, onSave }) {
+  const [data, setData] = useState(null);
+  const [customFields, setCustomFields] = useState([]);
+  const [fieldName, setFieldName] = useState('');
+  const [fieldValue, setFieldValue] = useState('');
+  const [price, setPrice] = useState('');
+  const [stock, setStock] = useState('1');
+  const [minimum, setMinimum] = useState('0');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+
+  const readLocal = async () => {
+    setLoading(true);
+    setMessage('Lendo configuração do localhost...');
+    try { setData(await onRead()); setMessage('Configuração lida. Revise os dados antes de salvar.'); } catch (error) { setMessage(error.message || 'Não foi possível ler o computador local.'); } finally { setLoading(false); }
+  };
+
+  const addField = () => {
+    if (!fieldName.trim()) return;
+    setCustomFields((current) => [...current, { name: fieldName.trim(), value: fieldValue.trim() }]);
+    setFieldName('');
+    setFieldValue('');
+  };
+
+  const save = async () => {
+    if (!data || !Number(price) || Number(price) <= 0) { setMessage('Informe um preço de venda maior que zero para salvar no inventário.'); return; }
+    setLoading(true);
+    try {
+      await onSave({ ...data, Campos_Personalizados: Object.fromEntries(customFields.map((item) => [item.name, item.value])), preco: Number(price), estoque: Number(stock), minimo: Number(minimum) });
+      onClose();
+    } catch (error) { setMessage(error.message || 'Não foi possível salvar no inventário.'); } finally { setLoading(false); }
+  };
+
+  return (
+    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+      <div className="modal-panel hardware-modal" role="dialog" aria-modal="true" aria-labelledby="hardware-modal-title">
+        <div className="modal-header"><div><span className="eyebrow">Inventário local</span><h2 id="hardware-modal-title">Ler configuração deste computador</h2></div><button className="ghost-button" type="button" onClick={onClose}>Fechar</button></div>
+        <p className="panel-subtitle">A leitura é feita pelo backend no Windows onde o sistema está executando. Confirme os dados antes de cadastrar.</p>
+        {!data && <button className="primary-button" type="button" onClick={readLocal} disabled={loading}>{loading ? 'Lendo...' : 'Ler configuração do localhost'}</button>}
+        {message && <p className="hardware-modal-message">{message}</p>}
+        {data && <>
+          <div className="hardware-modal-grid">{basicFields.map(([key, label]) => <label key={key}>{label}<input value={data[key] || ''} onChange={(event) => setData((current) => ({ ...current, [key]: event.target.value }))} /></label>)}</div>
+          <div className="hardware-custom-fields"><strong>Campos adicionais</strong><div className="hardware-custom-add"><input value={fieldName} onChange={(event) => setFieldName(event.target.value)} placeholder="Nome do campo" /><input value={fieldValue} onChange={(event) => setFieldValue(event.target.value)} placeholder="Valor" /><button className="secondary-button" type="button" onClick={addField}>Adicionar</button></div>{customFields.map((field, index) => <div className="hardware-custom-row" key={`${field.name}-${index}`}><span>{field.name}</span><strong>{field.value || 'Não informado'}</strong><button className="ghost-button" type="button" onClick={() => setCustomFields((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Remover</button></div>)}</div>
+          <div className="hardware-save-fields"><label>Preço de venda<input type="number" min="0.01" step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Informe o preço" /></label><label>Estoque inicial<input type="number" min="0" value={stock} onChange={(event) => setStock(event.target.value)} /></label><label>Estoque mínimo<input type="number" min="0" value={minimum} onChange={(event) => setMinimum(event.target.value)} /></label></div>
+          <div className="form-actions"><button className="secondary-button" type="button" onClick={onClose}>Cancelar</button><button className="primary-button" type="button" onClick={save} disabled={loading}>{loading ? 'Salvando...' : 'Cadastrar no inventário'}</button></div>
+        </>}
+      </div>
+    </div>
+  );
+}

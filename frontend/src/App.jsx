@@ -516,6 +516,37 @@ function App() {
     }
   };
 
+  const handleReadLocalHardware = async () => {
+    const response = await api.get('/inventory/hardware/local');
+    return response.data;
+  };
+
+  const handleSaveLocalHardware = async (hardware) => {
+    const equipmentId = String(hardware.ID_Equipamento || '').trim().toUpperCase();
+    const sku = `HW-${equipmentId || Date.now()}`.slice(0, 50);
+    const name = `${hardware.Fabricante || 'Computador'} ${hardware.Modelo || 'identificado localmente'}`.trim();
+    const specs = {
+      ...hardware,
+      Campos_Personalizados: hardware.Campos_Personalizados || {},
+    };
+    delete specs.preco;
+    delete specs.estoque;
+    delete specs.minimo;
+    const response = await api.post('/inventory', {
+      codigo: sku,
+      nome: name,
+      categoria: 'Outro',
+      equipamento_tipo: 'Computador',
+      estoque: hardware.estoque,
+      minimo: hardware.minimo,
+      preco: hardware.preco,
+      specs,
+    });
+    setInventory((current) => [response.data, ...current]);
+    setStatusMessage('Configuração local cadastrada no inventário');
+    return response.data;
+  };
+
   const handleServiceSubmit = async (event) => {
     event.preventDefault();
 
@@ -794,6 +825,8 @@ function App() {
         onDelete={handleDeleteInventory}
         onCancelEdit={() => { setEditingInventoryId(null); setInventoryForm(emptyInventoryForm); }}
         onSell={handleSellInventory}
+        onReadLocalHardware={handleReadLocalHardware}
+        onSaveLocalHardware={handleSaveLocalHardware}
       />
     ),
     servicos: (
