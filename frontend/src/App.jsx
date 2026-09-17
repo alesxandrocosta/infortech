@@ -68,6 +68,64 @@ function IndicatorLineChart({ history }) {
   );
 }
 
+function PublicAccessPanel() {
+  const [publicUrl, setPublicUrl] = useState(import.meta.env.VITE_PUBLIC_URL || '');
+  const [publicIp, setPublicIp] = useState('');
+  const [isLoading, setIsLoading] = useState(!import.meta.env.VITE_PUBLIC_URL);
+  const [copyMessage, setCopyMessage] = useState('');
+
+  useEffect(() => {
+    if (import.meta.env.VITE_PUBLIC_URL) return undefined;
+
+    let cancelled = false;
+    const detectPublicAddress = async () => {
+      try {
+        const response = await fetch('https://api4.ipify.org?format=json');
+        if (!response.ok) throw new Error('Falha ao consultar o IP público');
+        const { ip } = await response.json();
+        if (!cancelled && ip) {
+          const port = import.meta.env.VITE_PUBLIC_PORT || window.location.port || '5174';
+          setPublicIp(ip);
+          setPublicUrl(`${window.location.protocol}//${ip}:${port}`);
+        }
+      } catch {
+        if (!cancelled) setPublicUrl('');
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    detectPublicAddress();
+    return () => { cancelled = true; };
+  }, []);
+
+  const copyPublicUrl = async () => {
+    if (!publicUrl) return;
+    try {
+      await navigator.clipboard.writeText(publicUrl);
+      setCopyMessage('Copiado');
+      window.setTimeout(() => setCopyMessage(''), 1800);
+    } catch {
+      setCopyMessage('Selecione a URL para copiar');
+    }
+  };
+
+  return (
+    <section className="public-access-box" aria-live="polite">
+      <div className="public-access-heading"><span className="eyebrow">Acesso externo</span><span className={`public-access-dot${publicUrl ? ' is-ready' : ''}`} /></div>
+      {isLoading ? <p className="public-access-url">Identificando IPv4 público...</p> : publicUrl ? <><a className="public-access-url" href={publicUrl} target="_blank" rel="noreferrer">{publicUrl}</a><button className="secondary-button public-access-copy" type="button" onClick={copyPublicUrl}>{copyMessage || 'Copiar endereço'}</button></> : <p className="public-access-help">Configure VITE_PUBLIC_URL com o endereço externo do sistema.</p>}
+      <div className="public-access-config">
+        <strong>Configuração do roteador</strong>
+        <span>IP interno: <b>192.168.100.184</b></span>
+        <span>TCP externo 5174 → interno 5174</span>
+        <span>TCP externo 5000 → interno 5000</span>
+        {publicIp && <span>IPv4 público detectado: <b>{publicIp}</b></span>}
+      </div>
+      <small>Se a porta externa for diferente, defina VITE_PUBLIC_URL com a URL final.</small>
+    </section>
+  );
+}
+
 function App() {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
@@ -327,7 +385,7 @@ function App() {
       setCustomerForm(emptyCustomerForm);
       setCustomersEditingId(null);
       setStatusMessage(customersEditingId ? 'Cliente atualizado com sucesso' : 'Cliente cadastrado com sucesso');
-    } catch {
+    } catch (error) {
       setStatusMessage(error.message || 'Não foi possível cadastrar o cliente');
     }
   };
@@ -613,6 +671,14 @@ function App() {
       }
       setStatusMessage('Serviço excluído com sucesso');
     } catch (error) {
+      if (error.message === 'Serviço não encontrado.') {
+        setServices((current) => current.filter((service) => service.id !== serviceId));
+        if (editingServiceId === serviceId) {
+          handleCancelServiceEdit();
+        }
+        setStatusMessage('O serviço já havia sido removido');
+        return;
+      }
       setStatusMessage(error.message || 'Não foi possível excluir o serviço');
     }
   };
@@ -762,6 +828,7 @@ function App() {
               {saving ? 'Salvando...' : 'Atualizar rotina'}
             </button>
           </div>
+          <PublicAccessPanel />
         </aside>
       </div>
       <IndicatorLineChart history={indicatorHistory} />
@@ -831,10 +898,7 @@ function App() {
     ),
     servicos: (
       <ServicePanel
-        services={services.length ? services : [
-          { id: 1, nome: 'Troca de tela', categoria: 'Troca', tempo_estimado_horas: 2.5, preco_sugerido: 220.00 },
-          { id: 2, nome: 'Diagnóstico técnico', categoria: 'Diagnóstico', tempo_estimado_horas: 1.0, preco_sugerido: 90.00 },
-        ]}
+        services={services}
         form={serviceForm}
         editingId={editingServiceId}
         onChange={handleServiceFormChange}

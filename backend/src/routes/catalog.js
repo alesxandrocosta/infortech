@@ -11,7 +11,14 @@ const serviceFields = 'id, nome, descricao, notas, categoria, modalidade, preco_
 const partFields = 'id, codigo_sku, nome, categoria, condicao, equipamento_tipo, technical_specs, quantidade_estoque, quantidade_minima, preco_custo, preco_venda, ativo, created_at, updated_at';
 const serviceCategories = ['Troca', 'Reparo', 'Software', 'Diagnóstico', 'Limpeza', 'Manutenção', 'Formatação', 'Backup', 'Preventiva', 'Redes', 'Suporte', 'Outro'];
 const partCategories = ['Tela', 'Placa-Mãe', 'Processador', 'Memória RAM', 'Bateria', 'Conector', 'Fonte', 'Adaptador', 'Insumo', 'Acessório', 'Monitor', 'Smartphone', 'Fone', 'Mouse', 'Teclado', 'Mousepad', 'Outro'];
+const equipmentTypes = ['Desktop', 'Notebook', 'Tablet', 'Smartphone', 'Console', 'Universal', 'Outro'];
 router.use(requireAuth);
+
+function normalizeEquipmentType(value) {
+  const normalized = String(value || '').trim();
+  if (normalized === 'Computador') return 'Desktop';
+  return equipmentTypes.includes(normalized) ? normalized : 'Outro';
+}
 
 router.get('/inventory', async (req, res) => {
   const parts = await query(`SELECT ${partFields} FROM product_parts ORDER BY created_at DESC`);
@@ -100,7 +107,7 @@ router.post('/inventory', requireRoles('admin', 'gerente', 'administrativo'), as
   if (!partCategories.includes(categoria)) return res.status(400).json({ success: false, error: { code: 'INVALID_CATEGORY', message: 'Categoria de peça inválida.' } });
   if (await queryOne('SELECT id FROM product_parts WHERE codigo_sku = ?', [codigo])) return res.status(409).json({ success: false, error: { code: 'DUPLICATE_SKU', message: 'Este SKU já está cadastrado.' } });
   const id = randomUUID();
-  await query('INSERT INTO product_parts (id, codigo_sku, nome, categoria, condicao, equipamento_tipo, technical_specs, quantidade_estoque, quantidade_minima, preco_venda, ativo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)', [id, codigo, nome, categoria, req.body?.condicao || 'Nova', req.body?.equipamento_tipo || 'Universal', technicalSpecs, estoque, minimo, preco]);
+  await query('INSERT INTO product_parts (id, codigo_sku, nome, categoria, condicao, equipamento_tipo, technical_specs, quantidade_estoque, quantidade_minima, preco_venda, ativo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, TRUE)', [id, codigo, nome, categoria, req.body?.condicao || 'Nova', normalizeEquipmentType(req.body?.equipamento_tipo), technicalSpecs, estoque, minimo, preco]);
   const item = await queryOne(`SELECT ${partFields} FROM product_parts WHERE id = ?`, [id]);
   return res.status(201).json({ success: true, data: item, message: 'Peça cadastrada com sucesso.' });
 });
@@ -118,7 +125,7 @@ router.put('/inventory/:id', requireRoles('admin', 'gerente', 'administrativo'),
   if (!codigo || !nome || !Number.isFinite(estoque) || estoque < 0 || !Number.isFinite(minimo) || minimo < 0 || !Number.isFinite(preco) || preco <= 0) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'SKU, nome, quantidades válidas e preço maior que zero são obrigatórios.' } });
   if (!partCategories.includes(categoria)) return res.status(400).json({ success: false, error: { code: 'INVALID_CATEGORY', message: 'Categoria de peça inválida.' } });
   if (await queryOne('SELECT id FROM product_parts WHERE codigo_sku = ? AND id <> ?', [codigo, req.params.id])) return res.status(409).json({ success: false, error: { code: 'DUPLICATE_SKU', message: 'Este SKU já está cadastrado.' } });
-  await query('UPDATE product_parts SET codigo_sku = ?, nome = ?, categoria = ?, condicao = ?, equipamento_tipo = ?, technical_specs = ?, quantidade_estoque = ?, quantidade_minima = ?, preco_venda = ? WHERE id = ?', [codigo, nome, categoria, req.body?.condicao || 'Nova', req.body?.equipamento_tipo || 'Universal', technicalSpecs, estoque, minimo, preco, req.params.id]);
+  await query('UPDATE product_parts SET codigo_sku = ?, nome = ?, categoria = ?, condicao = ?, equipamento_tipo = ?, technical_specs = ?, quantidade_estoque = ?, quantidade_minima = ?, preco_venda = ? WHERE id = ?', [codigo, nome, categoria, req.body?.condicao || 'Nova', normalizeEquipmentType(req.body?.equipamento_tipo), technicalSpecs, estoque, minimo, preco, req.params.id]);
   const updated = await queryOne(`SELECT ${partFields} FROM product_parts WHERE id = ?`, [req.params.id]);
   return res.json({ success: true, data: updated, message: 'Peça atualizada com sucesso.' });
 });

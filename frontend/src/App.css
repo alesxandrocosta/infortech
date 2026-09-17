@@ -828,6 +828,66 @@
   gap: 22px;
 }
 
+.public-access-box {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  text-align: left;
+}
+
+.public-access-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.public-access-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+
+.public-access-dot.is-ready { background: #22c55e; }
+
+.public-access-url {
+  overflow-wrap: anywhere;
+  color: #bae6fd;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.public-access-url:hover { color: #f8fafc; }
+
+.public-access-copy {
+  justify-self: start;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.public-access-help,
+.public-access-box small {
+  color: #94a3b8;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.public-access-config {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
+  color: #cbd5e1;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.public-access-config strong { color: #f8fafc; }
+.public-access-config b { color: #bae6fd; }
+
 .inventory-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

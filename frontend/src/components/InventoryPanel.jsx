@@ -18,6 +18,43 @@ const skuCatalog = [
 
 const categoryOptions = ['Tela', 'Placa-Mãe', 'Processador', 'Memória RAM', 'Bateria', 'Conector', 'Fonte', 'Adaptador', 'Insumo', 'Acessório', 'Monitor', 'Smartphone', 'Fone', 'Mouse', 'Teclado', 'Mousepad', 'Outro'];
 
+function formatTechnicalKey(key) {
+  const labels = {
+    Model: 'Modelo',
+    SizeGB: 'Tamanho',
+    Interface: 'Interface',
+    SerialNumber: 'Número de série',
+    SpeedMHz: 'Velocidade',
+    CapacityGB: 'Capacidade',
+    PartNumber: 'Part number',
+    Manufacturer: 'Fabricante',
+    TypeCode: 'Tipo de memória',
+  };
+  return labels[key] || String(key).replaceAll('_', ' ');
+}
+
+function formatTechnicalValue(value) {
+  if (value === null || value === undefined || value === '') return '';
+  if (Array.isArray(value)) {
+    return value.map((item) => formatTechnicalValue(item)).join('; ');
+  }
+  if (typeof value === 'object') {
+    return Object.entries(value)
+      .filter(([, nestedValue]) => nestedValue !== null && nestedValue !== undefined && nestedValue !== '')
+      .map(([key, nestedValue]) => `${formatTechnicalKey(key)}: ${formatTechnicalValue(nestedValue)}`)
+      .join(', ');
+  }
+  return String(value);
+}
+
+function formatTechnicalField(key, value) {
+  if (key === 'Data_Cadastro') {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) return date.toLocaleString('pt-BR');
+  }
+  return formatTechnicalValue(value);
+}
+
 export default function InventoryPanel({ parts, form, editingId, onChange, onSubmit, onEdit, onDelete, onCancelEdit, onSell, onReadLocalHardware, onSaveLocalHardware }) {
   const [detailsItem, setDetailsItem] = useState(null);
   const [hardwareModalOpen, setHardwareModalOpen] = useState(false);
@@ -108,7 +145,7 @@ export default function InventoryPanel({ parts, form, editingId, onChange, onSub
         {partsOpen && <div className="parts-list"><input className="service-search" value={partQuery} onChange={(event) => setPartQuery(event.target.value)} placeholder="Pesquisar peça por SKU, nome ou categoria" />{filteredParts.map((part) => <article className="part-list-item" key={part.id}><button className="table-link part-list-name" type="button" onClick={() => setDetailsItem(part)}><strong>{part.nome}</strong><small>SKU {part.codigo || part.codigo_sku || 'sem SKU'} · {part.categoria}</small></button><span className={`status-pill ${part.quantidade_estoque <= (part.quantidade_minima || 0) ? 'risk' : 'ok'}`}>{part.quantidade_estoque} em estoque</span><div className="table-actions"><button className="secondary-button" type="button" onClick={() => onEdit(part)}>Editar</button><button className="ghost-button" type="button" onClick={() => onDelete(part.id)}>Excluir</button></div></article>)}{!filteredParts.length && <p className="empty-state">Nenhuma peça encontrada.</p>}</div>}
       </div>
       {hardwareModalOpen && <LocalHardwareModal onClose={() => setHardwareModalOpen(false)} onRead={onReadLocalHardware} onSave={onSaveLocalHardware} />}
-      {detailsItem && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetailsItem(null); }}><div className="modal-panel" role="dialog" aria-modal="true"><div className="modal-header"><div><span className="eyebrow">Detalhes do item</span><h2>{detailsItem.nome}</h2></div><button className="ghost-button" type="button" onClick={() => setDetailsItem(null)}>Fechar</button></div><div className="details-grid"><div><span className="eyebrow">SKU</span><strong>{detailsItem.codigo_sku || detailsItem.codigo}</strong></div><div><span className="eyebrow">Categoria</span><strong>{detailsItem.categoria}</strong></div><div><span className="eyebrow">Estoque atual</span><strong>{detailsItem.quantidade_estoque}</strong></div><div><span className="eyebrow">Estoque mínimo</span><strong>{detailsItem.quantidade_minima}</strong></div><div><span className="eyebrow">Preço de venda</span><strong>R$ {Number(detailsItem.preco_venda || detailsItem.preco || 0).toFixed(2)}</strong></div><div><span className="eyebrow">Condição</span><strong>{detailsItem.condicao || 'Nova'}</strong></div><div className="details-wide"><span className="eyebrow">Características técnicas</span><p>{detailsItem.technical_specs ? Object.entries(detailsItem.technical_specs).filter(([, value]) => value).map(([key, value]) => `${key}: ${value}`).join(' · ') : 'Não informado'}</p></div><div className="details-wide"><span className="eyebrow">Movimentações</span><p>{detailsItem.movements?.length ? detailsItem.movements.map((movement) => `${movement.origem} · ${movement.responsavel_nome} · ${new Date(movement.occurred_at).toLocaleString('pt-BR')} · R$ ${Number(movement.valor || 0).toFixed(2)}`).join('\n') : 'Nenhuma saída registrada.'}</p></div></div><div className="form-actions"><button className="primary-button" type="button" onClick={async () => { await onSell(detailsItem); setDetailsItem(null); }}>Registrar venda</button></div></div></div>}
+      {detailsItem && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetailsItem(null); }}><div className="modal-panel" role="dialog" aria-modal="true"><div className="modal-header"><div><span className="eyebrow">Detalhes do item</span><h2>{detailsItem.nome}</h2></div><button className="ghost-button" type="button" onClick={() => setDetailsItem(null)}>Fechar</button></div><div className="details-grid"><div><span className="eyebrow">SKU</span><strong>{detailsItem.codigo_sku || detailsItem.codigo}</strong></div><div><span className="eyebrow">Categoria</span><strong>{detailsItem.categoria}</strong></div><div><span className="eyebrow">Estoque atual</span><strong>{detailsItem.quantidade_estoque}</strong></div><div><span className="eyebrow">Estoque mínimo</span><strong>{detailsItem.quantidade_minima}</strong></div><div><span className="eyebrow">Preço de venda</span><strong>R$ {Number(detailsItem.preco_venda || detailsItem.preco || 0).toFixed(2)}</strong></div><div><span className="eyebrow">Condição</span><strong>{detailsItem.condicao || 'Nova'}</strong></div><div className="details-wide"><span className="eyebrow">Características técnicas</span><p>{detailsItem.technical_specs ? Object.entries(detailsItem.technical_specs).filter(([, value]) => value).map(([key, value]) => `${formatTechnicalKey(key)}: ${formatTechnicalField(key, value)}`).join(' · ') : 'Não informado'}</p></div><div className="details-wide"><span className="eyebrow">Movimentações</span><p>{detailsItem.movements?.length ? detailsItem.movements.map((movement) => `${movement.origem} · ${movement.responsavel_nome} · ${new Date(movement.occurred_at).toLocaleString('pt-BR')} · R$ ${Number(movement.valor || 0).toFixed(2)}`).join('\n') : 'Nenhuma saída registrada.'}</p></div></div><div className="form-actions"><button className="primary-button" type="button" onClick={async () => { await onSell(detailsItem); setDetailsItem(null); }}>Registrar venda</button></div></div></div>}
     </section>
   );
 }
