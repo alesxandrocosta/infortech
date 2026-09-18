@@ -430,10 +430,17 @@ function App() {
   };
 
   const handleReadLocalHardware = async () => {
-    const response = await fetch('http://localhost:5310/hardware');
-    const payload = await response.json();
-    if (!response.ok || !payload?.success) throw new Error(payload?.error || 'Inicie o cliente-agent.ps1 nesta maquina.');
-    return payload.data;
+    try {
+      const response = await fetch('http://localhost:5310/hardware');
+      const payload = await response.json();
+      if (!response.ok || !payload?.success) throw new Error(payload?.error || 'O agente local retornou um erro.');
+      return payload.data;
+    } catch (error) {
+      if (error instanceof TypeError || error.message === 'Failed to fetch') {
+        throw new Error('Agente local indisponível. Execute iniciar-cliente-agent.cmd nesta máquina e tente novamente.');
+      }
+      throw error;
+    }
   };
 
   const handlePrintLocalHardware = async (hardware) => {
