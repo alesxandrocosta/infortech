@@ -671,10 +671,7 @@ function App() {
     ),
     estoque: (
       <InventoryPanel
-        parts={inventory.length ? inventory : [
-          { id: 1, codigo_sku: 'TEL-001', nome: 'Tela LCD 13.3', categoria: 'Tela', quantidade_estoque: 12, quantidade_minima: 4 },
-          { id: 2, codigo_sku: 'BAT-010', nome: 'Bateria Notebook Dell', categoria: 'Bateria', quantidade_estoque: 3, quantidade_minima: 4 },
-        ]}
+        parts={inventory}
         form={inventoryForm}
         editingId={editingInventoryId}
         onChange={handleInventoryFormChange}
