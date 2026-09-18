@@ -5,6 +5,7 @@
   "description": "TechFlow ERP - frontend e backend",
   "scripts": {
     "install:all": "npm install --prefix backend && npm install --prefix frontend && npm install",
+    "install:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/install-dependencies.ps1",
     "dev": "concurrently --kill-others-on-fail --names backend,frontend --prefix-colors blue,green \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
     "restart": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/restart.ps1",
     "start": "npm run restart",

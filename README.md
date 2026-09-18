@@ -72,6 +72,22 @@ npm run dev
 O frontend ficará disponível em `http://0.0.0.0:5173/` e a API em `http://localhost:5000`.
 Para encerrar os dois serviços, pressione `Ctrl+C` no mesmo terminal.
 
+### Reinstalar dependências após formatar o computador
+
+Com Node.js LTS 18 ou superior instalado, abra o PowerShell na raiz do projeto e execute:
+
+```powershell
+npm run install:windows
+```
+
+O instalador instala as dependências da raiz, backend e frontend, cria `backend/.env` somente se ele ainda não existir e preserva configurações existentes. Revise o arquivo `.env` e instale o MySQL Server antes de inicializar o banco:
+
+```powershell
+npm run init-db
+```
+
+Para instalar as dependências e inicializar o banco no mesmo passo, use `./scripts/install-dependencies.ps1 -InitializeDatabase` depois de configurar as credenciais no `.env`.
+
 ### Cadastro e avisos por WhatsApp Web
 
 O cadastro de clientes possui telefone, WhatsApp, CEP, número da casa e endereço. O CEP é consultado automaticamente pelo ViaCEP.
