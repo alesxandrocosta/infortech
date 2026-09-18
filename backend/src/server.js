@@ -25,6 +25,15 @@ const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
   .filter(Boolean);
 const localCorsOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://0.0.0.0:5173'];
 const isLocalOrigin = (origin) => /^(https?):\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$/.test(origin);
+const isPrivateNetworkOrigin = (origin) => {
+  const match = origin.match(/^https?:\/\/((?:\d{1,3}\.){3}\d{1,3})(?::\d+)?$/);
+  if (!match) return false;
+  const octets = match[1].split('.').map(Number);
+  if (octets.some((octet) => octet > 255)) return false;
+  return octets[0] === 10
+    || (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31)
+    || (octets[0] === 192 && octets[1] === 168);
+};
 
 const DEFAULT_CHECKLIST = [
   { id: 1, item: 'Carcaça', estado: 'OK' },
@@ -40,7 +49,8 @@ const DEFAULT_CHECKLIST = [
 app.use(cors({
   origin: (requestOrigin, callback) => {
     const localOriginAllowed = process.env.NODE_ENV !== 'production' && requestOrigin && isLocalOrigin(requestOrigin);
-    if (!requestOrigin || corsOrigins.includes(requestOrigin) || localCorsOrigins.includes(requestOrigin) || localOriginAllowed) {
+    const privateNetworkOriginAllowed = process.env.NODE_ENV !== 'production' && requestOrigin && isPrivateNetworkOrigin(requestOrigin);
+    if (!requestOrigin || corsOrigins.includes(requestOrigin) || localCorsOrigins.includes(requestOrigin) || localOriginAllowed || privateNetworkOriginAllowed) {
       return callback(null, true);
     }
     return callback(new Error('Origin not allowed by CORS'));
