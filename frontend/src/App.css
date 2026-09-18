@@ -2275,17 +2275,17 @@ td {
 
 @media print {
   @page {
-    size: auto;
+    size: 100mm 150mm;
     margin: 0;
   }
 
   html,
   body,
   #root {
-    width: 200mm;
-    min-width: 200mm;
-    height: 300mm;
-    min-height: 300mm;
+    width: 100mm;
+    min-width: 100mm;
+    height: 150mm;
+    min-height: 150mm;
     margin: 0;
     padding: 0;
     background: #fff;
@@ -2303,7 +2303,7 @@ td {
   }
 
   .print-preview {
-    width: 200mm;
+    width: 100mm;
     max-height: none;
     overflow: visible;
     padding: 0;
@@ -2317,16 +2317,14 @@ td {
 
   .print-layer {
     display: block !important;
-    width: 200mm;
+    width: 100mm;
   }
 
   .print-sheet {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(2, 1fr);
-    width: 200mm;
-    height: 300mm;
-    min-height: 300mm;
+    display: block;
+    width: 100mm;
+    height: 150mm;
+    min-height: 150mm;
     break-inside: avoid;
     page-break-inside: avoid;
     page-break-after: always;

@@ -1,6 +1,6 @@
 import { QRCodeSVG } from 'qrcode.react';
 
-export default function LabelPrintView({ job, onClose, onPrint }) {
+export default function LabelPrintView({ job, onClose, onPrint, onPrintToLabel }) {
   if (!job) return null;
 
   const labels = Array.from({ length: job.quantity }, (_, index) => ({
@@ -8,16 +8,13 @@ export default function LabelPrintView({ job, onClose, onPrint }) {
     number: index + 1,
   }));
 
-  const pages = [];
-  for (let index = 0; index < labels.length; index += 4) {
-    pages.push(labels.slice(index, index + 4));
-  }
+  const pages = labels.map((label) => [label]);
   const hardwareUrl = `${window.location.origin}/os/${job.order.id}?hwid=${encodeURIComponent(job.order.hwid_equipamento || '')}`;
 
   return (
     <div className="print-preview-backdrop">
       <div className="print-preview" role="dialog" aria-modal="true" aria-labelledby="print-preview-title">
-        <div className="print-preview-toolbar"><div><span className="eyebrow">Pré-visualização</span><h2 id="print-preview-title">Etiquetas da OS {job.order.protocolo || 'sem protocolo'}</h2><p>{job.quantity} etiqueta(s) · {job.order.cliente || 'Cliente não informado'}</p></div><div className="form-actions"><button className="primary-button" type="button" onClick={onPrint}>Imprimir</button><button className="secondary-button" type="button" onClick={onClose}>Fechar</button></div></div>
+        <div className="print-preview-toolbar"><div><span className="eyebrow">Pré-visualização · 100 × 150 mm</span><h2 id="print-preview-title">Etiquetas da OS {job.order.protocolo || 'sem protocolo'}</h2><p>{job.quantity} etiqueta(s) · {job.order.cliente || 'Cliente não informado'}</p></div><div className="form-actions"><button className="primary-button" type="button" onClick={onPrint}>Imprimir</button><button className="secondary-button" type="button" onClick={onPrintToLabel}>Imprimir na label</button><button className="secondary-button" type="button" onClick={onClose}>Fechar</button></div></div>
         <div className="print-layer">
           {pages.map((page, pageIndex) => (
             <div className="print-sheet" key={`page-${pageIndex}`}>

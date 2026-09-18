@@ -805,7 +805,7 @@ function App() {
           {activeSection === 'vendas' ? salesView : activeSection === 'dashboard' ? dashboardView : activeModuleView[activeSection]}
         </section>
       </main>
-      <LabelPrintView job={printJob} onClose={() => setPrintJob(null)} onPrint={() => window.print()} />
+      <LabelPrintView job={printJob} onClose={() => setPrintJob(null)} onPrint={() => window.print()} onPrintToLabel={() => window.print()} />
     </div>
   );
 }
