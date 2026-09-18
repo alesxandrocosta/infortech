@@ -53,7 +53,7 @@ export default function LocalHardwareModal({ onClose, onRead, onSave, onPrint })
     setLoading(true);
     try {
       await onPrint({ ...data, Campos_Personalizados: Object.fromEntries(customFields.map((item) => [item.name, item.value])) });
-      setMessage('Uma etiqueta 100 x 150 mm foi enviada para a impressora LABEL do host.');
+      setMessage('Uma etiqueta 100 x 150 mm foi enviada para a pasta monitorada do host.');
     } catch (error) {
       setMessage(error.message || 'Não foi possível enviar a etiqueta para impressão.');
     } finally {

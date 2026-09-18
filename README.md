@@ -92,6 +92,12 @@ O procedimento completo de implantação está em [docs/MANUAL_IMPLANTACAO_PRODU
 
 Para acesso de outras máquinas na mesma rede, abra o frontend usando o IP do computador servidor, por exemplo `http://192.168.1.10:5173`, e libere as portas `5173` e `5000` no Firewall do Windows. Em desenvolvimento, o backend aceita origens privadas `10.x.x.x`, `172.16.x.x` a `172.31.x.x` e `192.168.x.x`. Em produção, configure o domínio exato em `CORS_ORIGIN`.
 
+### Impressão de etiquetas por pasta monitorada
+
+O botão de impressão do modal de hardware gera uma única etiqueta `.docx` em `\\DESKTOP-TI60S88\Etiquetas`, no formato de página `100 x 150 mm`. O serviço monitorado deve executar o [cliente.ps1](cliente.ps1) no host da impressora; ele detecta novos arquivos nessa pasta e os encaminha para a impressora configurada.
+
+Para outro destino, configure `LABEL_OUTPUT_DIR` no `backend/.env`. A conta que executa o backend precisa ter permissão de gravação na pasta compartilhada.
+
 ### Cadastro e avisos por WhatsApp Web
 
 O cadastro de clientes possui telefone, WhatsApp, CEP, número da casa e endereço. O CEP é consultado automaticamente pelo ViaCEP.

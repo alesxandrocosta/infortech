@@ -34,7 +34,13 @@ router.get('/inventory/hardware/local', requireRoles('admin', 'gerente', 'admini
     $uuid = (Get-CimInstance Win32_ComputerSystemProduct | Select-Object -First 1 UUID).UUID
     $ram = @(Get-CimInstance Win32_PhysicalMemory | ForEach-Object { [PSCustomObject]@{ CapacityGB = [math]::Round($_.Capacity / 1GB, 2); TypeCode = $_.SMBIOSMemoryType; SpeedMHz = $_.Speed; Manufacturer = $_.Manufacturer; PartNumber = $_.PartNumber } })
     $disks = @(Get-CimInstance Win32_DiskDrive | ForEach-Object { [PSCustomObject]@{ Model = $_.Model; SerialNumber = $_.SerialNumber; SizeGB = [math]::Round($_.Size / 1GB, 2); Interface = $_.InterfaceType } })
-    [PSCustomObject]@{ Cpu = $cpu; Computer = $computer; OperatingSystem = $os; Bios = $bios; Uuid = $uuid; Memory = $ram; Disks = $disks } | ConvertTo-Json -Depth 5 -Compress
+    $physicalMemory = @(Get-CimInstance Win32_PhysicalMemory | Where-Object { $_.ConfiguredClockSpeed -gt 0 })
+    $usb3 = @(Get-CimInstance Win32_USBController -ErrorAction SilentlyContinue | Where-Object { $_.Name -match '3[.]0|3[.]1|3[.]2|xHCI' })
+    $network = @(Get-CimInstance Win32_NetworkAdapter -ErrorAction SilentlyContinue)
+    $wifi = @($network | Where-Object { $_.Name -match 'Wireless|Wi-Fi|802[.]11' -and $_.PhysicalAdapter -eq $true })
+    $bluetooth = @($network | Where-Object { $_.Name -match 'Bluetooth' })
+    $graphics = @(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name)
+    [PSCustomObject]@{ Cpu = $cpu; Computer = $computer; OperatingSystem = $os; Bios = $bios; Uuid = $uuid; Memory = $ram; MemoryHealthy = ($physicalMemory.Count -gt 0); Disks = $disks; Graphics = $graphics; Usb3 = ($usb3.Count -gt 0); Wifi = ($wifi.Count -gt 0); Bluetooth = ($bluetooth.Count -gt 0) } | ConvertTo-Json -Depth 5 -Compress
   `;
 
   try {
@@ -52,6 +58,7 @@ router.get('/inventory/hardware/local', requireRoles('admin', 'gerente', 'admini
       Processador: processor.Name || '',
       Memoria_RAM: totalMemory ? `${totalMemory.toFixed(2)} GB` : '',
       Tipo_Memoria: [...new Set(memory.map((item) => memoryTypes[item.TypeCode] || `Codigo ${item.TypeCode || 'nao informado'}`))].join(', '),
+      Saude_RAM: raw.MemoryHealthy ? 'Saudavel (operacional)' : 'Verificar',
       Modulos_Memoria: memory,
       Sistema_Operacional: raw.OperatingSystem?.Caption || '',
       Versao_SO: raw.OperatingSystem?.Version || '',
@@ -60,6 +67,9 @@ router.get('/inventory/hardware/local', requireRoles('admin', 'gerente', 'admini
       Modelo: raw.Computer?.Model || '',
       Armazenamento: disks.map((disk) => `${disk.Model || 'Disco'} ${disk.SizeGB || ''} GB`).join(' | '),
       Discos: disks,
+      Graficos: Array.isArray(raw.Graphics) ? raw.Graphics.join(' | ') : String(raw.Graphics || ''),
+      USB_3: raw.Usb3 ? 'Presente (alta velocidade)' : 'Apenas USB 2.0',
+      Rede_Sem_Fio: [raw.Wifi ? 'Wi-Fi' : '', raw.Bluetooth ? 'Bluetooth' : ''].filter(Boolean).join(' + ') || 'Apenas rede cabeada',
       Data_Cadastro: new Date().toISOString(),
     };
     return res.json({ success: true, data: result, message: 'Configuracao local lida com sucesso.' });
@@ -75,61 +85,14 @@ router.post('/inventory/hardware/local/print', requireRoles('admin', 'gerente', 
   }
 
   const payload = Buffer.from(JSON.stringify(req.body || {}), 'utf8').toString('base64');
-  const printerName = process.env.LABEL_PRINTER_NAME || 'LABEL';
-  const script = `
-    param([string]$JsonBase64, [string]$PrinterName)
-    Add-Type -AssemblyName System.Drawing
-    $json = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($JsonBase64))
-    $data = $json | ConvertFrom-Json
-    $document = New-Object System.Drawing.Printing.PrintDocument
-    $document.PrinterSettings.PrinterName = $PrinterName
-    if (-not $document.PrinterSettings.IsValid) { throw "Impressora nao encontrada: $PrinterName" }
-    $document.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0, 0, 0, 0)
-    $document.DefaultPageSettings.PaperSize = New-Object System.Drawing.Printing.PaperSize('Label100x150mm', 394, 591)
-    $printPageHandler = [System.Drawing.Printing.PrintPageEventHandler]{
-      param($sender, $event)
-      $fontTitle = [System.Drawing.Font]::new('Arial', 16, [System.Drawing.FontStyle]::Bold)
-      $fontLabel = [System.Drawing.Font]::new('Arial', 8, [System.Drawing.FontStyle]::Bold)
-      $fontValue = [System.Drawing.Font]::new('Arial', 10, [System.Drawing.FontStyle]::Regular)
-      $brush = [System.Drawing.Brushes]::Black
-      $y = 12
-      $event.Graphics.DrawString('TECHFLOW ERP', $fontTitle, $brush, 12, $y)
-      $y += 32
-      $event.Graphics.DrawString('ETIQUETA DE EQUIPAMENTO', $fontLabel, $brush, 12, $y)
-      $y += 24
-      $rows = @(
-        @('ID', [string]$data.ID_Equipamento),
-        @('Fabricante', [string]$data.Fabricante),
-        @('Modelo', [string]$data.Modelo),
-        @('Processador', [string]$data.Processador),
-        @('Memoria RAM', [string]$data.Memoria_RAM),
-        @('Sistema', [string]$data.Sistema_Operacional),
-        @('Versao', [string]$data.Versao_SO),
-        @('Serial BIOS', [string]$data.Serial_BIOS),
-        @('UUID', [string]$data.UUID_Sistema),
-        @('Armazenamento', [string]$data.Armazenamento)
-      )
-      foreach ($row in $rows) {
-        $event.Graphics.DrawString($row[0], $fontLabel, $brush, 12, $y)
-        $y += 13
-        $event.Graphics.DrawString(($row[1] -replace '\\s+', ' ').Trim(), $fontValue, $brush, 12, $y, [System.Drawing.StringFormat]::GenericDefault)
-        $y += 26
-        if ($y -gt 555) { break }
-      }
-      $event.Graphics.DrawString((Get-Date -Format 'yyyy-MM-dd HH:mm'), $fontLabel, $brush, 12, 570)
-      $event.HasMorePages = $false
-    }
-    $document.add_PrintPage($printPageHandler)
-    $document.Print()
-    $document.Dispose()
-  `;
-
+  const destinationFolder = process.env.LABEL_OUTPUT_DIR || '\\\\DESKTOP-TI60S88\\Etiquetas';
+  const scriptPath = require('path').join(__dirname, '../../scripts/generate-hardware-label.ps1');
   try {
-    await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script, '-JsonBase64', payload, '-PrinterName', printerName], { windowsHide: true, timeout: 15000, maxBuffer: 1024 * 1024 });
-    return res.json({ success: true, data: { printer: printerName, labels: 1, size: '100x150mm' }, message: 'Uma etiqueta enviada para a impressora.' });
+    const { stdout } = await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, '-JsonBase64', payload, '-DestinationFolder', destinationFolder], { windowsHide: true, timeout: 15000, maxBuffer: 1024 * 1024 });
+    return res.json({ success: true, data: { file: stdout.trim(), destination: destinationFolder, labels: 1, size: '100x150mm' }, message: 'Uma etiqueta foi enviada para a pasta monitorada.' });
   } catch (error) {
-    console.error('Local hardware print error:', error.message);
-    return res.status(502).json({ success: false, error: { code: 'HARDWARE_PRINT_ERROR', message: `Nao foi possivel imprimir na fila ${printerName}.` } });
+    console.error('Local hardware label output error:', error.message);
+    return res.status(502).json({ success: false, error: { code: 'HARDWARE_LABEL_OUTPUT_ERROR', message: `Nao foi possivel gravar a etiqueta em ${destinationFolder}.` } });
   }
 });
 
