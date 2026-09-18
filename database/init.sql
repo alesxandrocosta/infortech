@@ -44,9 +44,6 @@ CREATE TABLE IF NOT EXISTS customers (
   email VARCHAR(255),
   portal_password_hash VARCHAR(255),
   endereco TEXT,
-  cep VARCHAR(9),
-  numero VARCHAR(20),
-  whatsapp VARCHAR(20),
   observacoes TEXT,
   status ENUM('Adimplente', 'Inadimplente') DEFAULT 'Adimplente',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -148,15 +145,6 @@ CREATE TABLE IF NOT EXISTS service_orders (
   equipamento_modelo VARCHAR(100),
   equipamento_serie VARCHAR(100),
   equipamento_tipo VARCHAR(100),
-  hwid_equipamento VARCHAR(16),
-  serial_bios VARCHAR(255),
-  uuid_sistema VARCHAR(255),
-  mac_rede VARCHAR(255),
-  serial_disco VARCHAR(255),
-  especificacoes_json JSON,
-  hardware_validacao_status VARCHAR(30),
-  hardware_divergencias_json JSON,
-  hardware_validado_em DATETIME,
   defeito_relatado TEXT,
   laudo_tecnico TEXT,
   data_abertura DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -177,7 +165,6 @@ CREATE TABLE IF NOT EXISTS service_orders (
   INDEX idx_tecnico_id (tecnico_id),
   INDEX idx_atendente_id (atendente_id),
   INDEX idx_status (status),
-  INDEX idx_service_orders_hwid (hwid_equipamento),
   INDEX idx_data_abertura (data_abertura)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -355,13 +342,6 @@ CREATE TABLE IF NOT EXISTS inventory_movements (
 CREATE TABLE IF NOT EXISTS sales (
   id VARCHAR(36) PRIMARY KEY,
   customer_name VARCHAR(255),
-  customer_id VARCHAR(36),
-  hwid_equipamento VARCHAR(16),
-  serial_bios VARCHAR(255),
-  uuid_sistema VARCHAR(255),
-  mac_rede VARCHAR(255),
-  serial_disco VARCHAR(255),
-  especificacoes_json JSON,
   subtotal DECIMAL(10, 2) NOT NULL,
   tax_rate DECIMAL(6, 4) NOT NULL DEFAULT 0.0865,
   tax_amount DECIMAL(10, 2) NOT NULL,
@@ -375,11 +355,8 @@ CREATE TABLE IF NOT EXISTS sales (
   user_name VARCHAR(255),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-  FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL,
   INDEX idx_sales_created_at (created_at),
   INDEX idx_sales_payment_method (payment_method)
-  ,INDEX idx_sales_customer_id (customer_id)
-  ,INDEX idx_sales_hwid (hwid_equipamento)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS sale_items (

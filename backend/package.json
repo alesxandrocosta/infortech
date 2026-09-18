@@ -1,13 +1,12 @@
 {
   "name": "techflow-erp-backend",
-  "version": "1.2.0",
+  "version": "1.0.0",
   "description": "TechFlow ERP - Backend em Node.js + Express",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "init-db": "node scripts/init-database.js",
-    "migrate-service-bench": "node scripts/migrate-service-bench.js",
     "seed-users": "node scripts/seed-users.js",
     "create-admin": "node scripts/create-production-admin.js",
     "migrate-sales": "node scripts/migrate-sales.js",
@@ -36,9 +35,7 @@
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.0.2",
     "mysql2": "^3.6.5",
-    "qrcode-terminal": "^0.12.0",
-    "uuid": "^9.0.1",
-    "whatsapp-web.js": "^1.34.7"
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "eslint": "^8.53.0",

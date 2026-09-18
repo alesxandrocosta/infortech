@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
 const PIX_KEY = '31993968438';
@@ -39,8 +39,6 @@ export default function SalesPage({ inventory, customers, onCheckout, onCreateOr
   const [osForm, setOsForm] = useState({ cliente: '', equipamento: '', defeito: '' });
   const [osMessage, setOsMessage] = useState('');
   const [orderModalOpen, setOrderModalOpen] = useState(false);
-  const [saleHardware, setSaleHardware] = useState({});
-  const saleHardwareRef = useRef(null);
 
   const filteredProducts = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -78,7 +76,7 @@ export default function SalesPage({ inventory, customers, onCheckout, onCreateOr
   const handleCheckout = async () => {
     setSaleError('');
     try {
-      const sale = await onCheckout({ items: cart.map((item) => ({ id: item.id, quantity: item.quantity })), payment_method: paymentMethod, amount_paid: paymentMethod === 'Dinheiro' ? Number(amountPaid || 0) : undefined, customer_name: customerName, hardware: saleHardware });
+      const sale = await onCheckout({ items: cart.map((item) => ({ id: item.id, quantity: item.quantity })), payment_method: paymentMethod, amount_paid: paymentMethod === 'Dinheiro' ? Number(amountPaid || 0) : undefined, customer_name: customerName });
       setLastSale(sale);
       setCart([]);
       setAmountPaid('');
@@ -91,7 +89,7 @@ export default function SalesPage({ inventory, customers, onCheckout, onCreateOr
     event.preventDefault();
     setOsMessage('');
     try {
-      await onCreateOrder({ ...osForm, hardware: saleHardware });
+      await onCreateOrder(osForm);
       setOsForm({ cliente: '', equipamento: '', defeito: '' });
       setOsMessage('OS criada e enviada para a fila de atendimento.');
       setOrderModalOpen(false);
@@ -120,8 +118,6 @@ export default function SalesPage({ inventory, customers, onCheckout, onCreateOr
         <aside className="sales-checkout-panel">
           <div className="sales-panel-heading"><div><span className="eyebrow">Pedido atual</span><h2>Seleção</h2></div><span className="sales-cart-count">{cart.reduce((sum, item) => sum + item.quantity, 0)} itens</span></div>
           <label className="sales-field">Cliente (opcional)<input value={customerName} onChange={(event) => setCustomerName(event.target.value)} list="sales-customers" placeholder="Nome para o comprovante" /></label>
-          <input ref={saleHardwareRef} type="file" accept="application/json,.json" hidden onChange={(event) => { const [file] = event.target.files || []; if (!file) return; const reader = new FileReader(); reader.onload = () => { try { const data = JSON.parse(String(reader.result)); setSaleHardware({ ...data, hwid_equipamento: data.hwid_equipamento || data.ID_Equipamento, serial_bios: data.serial_bios || data.Serial_BIOS, uuid_sistema: data.uuid_sistema || data.UUID_Sistema, mac_rede: data.mac_rede || data.MAC_Rede, serial_disco: data.serial_disco || data.Serial_Disco }); } catch { setSaleError('O JSON de hardware é inválido.'); } event.target.value = ''; }; reader.readAsText(file); }} />
-          <button className="secondary-button" type="button" onClick={() => saleHardwareRef.current?.click()}>Importar hardware da venda</button>
           <datalist id="sales-customers">{customers.map((customer) => <option key={customer.id} value={customer.nome} />)}</datalist>
           <div className={cart.length > 6 ? 'sales-cart-list sales-cart-list-dense' : 'sales-cart-list'}>{cart.map((item) => <div className="sales-cart-item" key={item.id}><div><strong>{item.nome}</strong><small>{formatCurrency(item.preco_venda)} cada</small></div><div className="sales-cart-controls"><input aria-label={`Quantidade de ${item.nome}`} type="number" min="1" max={item.quantidade_estoque} value={item.quantity} onChange={(event) => updateQuantity(item.id, event.target.value)} /><button type="button" onClick={() => removeFromCart(item.id)} aria-label={`Remover ${item.nome}`}>×</button></div></div>)}{!cart.length && <p className="sales-cart-empty">Clique em um item do estoque para iniciar a venda.</p>}</div>
           <div className="sales-totals"><div className="sales-total-line"><span>Total</span><strong>{formatCurrency(total)}</strong></div></div>
@@ -134,7 +130,7 @@ export default function SalesPage({ inventory, customers, onCheckout, onCreateOr
 
       <section className="sales-service-section"><div className="sales-service-heading"><div><span className="eyebrow">Atendimento</span><h2>Ordem de serviço</h2><p>Abra uma solicitação e envie para a fila técnica.</p></div><button className="primary-button" type="button" onClick={() => { setOsMessage(''); setOrderModalOpen(true); }}>Abrir ordem</button></div>{osMessage && <p className="sales-feedback">{osMessage}</p>}</section>
 
-      {orderModalOpen && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOrderModalOpen(false); }}><div className="sales-order-modal" role="dialog" aria-modal="true" aria-labelledby="sales-order-title"><div className="sales-service-heading"><div><span className="eyebrow">Atendimento</span><h2 id="sales-order-title">Abrir ordem de serviço</h2></div><button className="ghost-button" type="button" onClick={() => setOrderModalOpen(false)}>Fechar</button></div><p className="sales-modal-copy">Informe os dados básicos. A equipe poderá complementar a ordem nas telas administrativas.</p><form className="sales-os-form sales-os-form-modal" onSubmit={handleCreateOrder}><label>Cliente<select value={osForm.cliente} onChange={(event) => setOsForm({ ...osForm, cliente: event.target.value })} required><option value="">Selecione o cliente</option>{customers.map((customer) => <option key={customer.id} value={customer.nome}>{customer.nome}</option>)}</select></label><label>Equipamento<input value={osForm.equipamento} onChange={(event) => setOsForm({ ...osForm, equipamento: event.target.value })} placeholder="Ex.: Notebook Dell" required /></label><label>Defeito relatado<input value={osForm.defeito} onChange={(event) => setOsForm({ ...osForm, defeito: event.target.value })} placeholder="Descreva o problema" required /></label><button className="secondary-button" type="button" onClick={() => saleHardwareRef.current?.click()}>Importar JSON do equipamento</button><div className="form-actions"><button className="secondary-button" type="button" onClick={() => setOrderModalOpen(false)}>Cancelar</button><button className="primary-button" type="submit">Enviar para fila</button></div></form></div></div>}
+      {orderModalOpen && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setOrderModalOpen(false); }}><div className="sales-order-modal" role="dialog" aria-modal="true" aria-labelledby="sales-order-title"><div className="sales-service-heading"><div><span className="eyebrow">Atendimento</span><h2 id="sales-order-title">Abrir ordem de serviço</h2></div><button className="ghost-button" type="button" onClick={() => setOrderModalOpen(false)}>Fechar</button></div><p className="sales-modal-copy">Informe os dados básicos. A equipe poderá complementar a ordem nas telas administrativas.</p><form className="sales-os-form sales-os-form-modal" onSubmit={handleCreateOrder}><label>Cliente<select value={osForm.cliente} onChange={(event) => setOsForm({ ...osForm, cliente: event.target.value })} required><option value="">Selecione o cliente</option>{customers.map((customer) => <option key={customer.id} value={customer.nome}>{customer.nome}</option>)}</select></label><label>Equipamento<input value={osForm.equipamento} onChange={(event) => setOsForm({ ...osForm, equipamento: event.target.value })} placeholder="Ex.: Notebook Dell" required /></label><label>Defeito relatado<input value={osForm.defeito} onChange={(event) => setOsForm({ ...osForm, defeito: event.target.value })} placeholder="Descreva o problema" required /></label><div className="form-actions"><button className="secondary-button" type="button" onClick={() => setOrderModalOpen(false)}>Cancelar</button><button className="primary-button" type="submit">Enviar para fila</button></div></form></div></div>}
 
       {lastSale && <div className="modal-backdrop" role="presentation"><div className="sales-receipt-modal" role="dialog" aria-modal="true"><button className="ghost-button sales-modal-close" type="button" onClick={() => setLastSale(null)}>Fechar</button><span className="eyebrow">Venda aprovada</span><h2>Pagamento registrado</h2><p>Venda #{lastSale.id.slice(0, 8)} · {lastSale.payment_method}</p><div className="sales-receipt-total">{formatCurrency(lastSale.total)}</div>{lastSale.payment_method === 'Dinheiro' && <div className="sales-receipt-change"><span>Troco</span><strong>{formatCurrency(lastSale.change_amount)}</strong></div>}{lastSale.payment_method === 'Pix' && <div className="pix-box"><QRCodeSVG value={createPixPayload(lastSale.total)} size={190} bgColor="#ffffff" fgColor="#10222c" level="M" /><strong>Escaneie para pagar</strong><small>Chave PIX: {PIX_KEY}</small></div>}<button className="primary-button" type="button" onClick={() => setLastSale(null)}>Novo atendimento</button></div></div>}
     </section>

@@ -42,7 +42,7 @@ router.get('/oauth/:provider/callback', async (req, res) => {
     const email = String(identity.email || identity.preferred_username || '').toLowerCase();
     const user = email ? await queryOne('SELECT id FROM users WHERE email = ?', [email]) : null;
     if (!user) return res.status(403).send('A conta social foi validada, mas o e-mail não está cadastrado no sistema.');
-    const frontendUrl = process.env.CORS_ORIGIN || 'http://0.0.0.0:5173/';
+    const frontendUrl = process.env.CORS_ORIGIN || 'http://localhost:5173';
     return res.redirect(`${frontendUrl}/?oauth_token=${encodeURIComponent(`mock-token-${user.id}`)}`);
   } catch (error) { console.error('OAuth error:', error.message); return res.status(500).send('Erro ao concluir autenticação social.'); }
 });
@@ -51,7 +51,7 @@ router.post('/login', async (req, res) => {
   try {
     const email = String(req.body?.email || '').trim().toLowerCase();
     const password = String(req.body?.password || '');
-    const user = await queryOne('SELECT id, full_name, email, telefone, marca, role, password_hash FROM users WHERE email = ? OR username = ?', [email, email]);
+    const user = await queryOne('SELECT id, full_name, email, telefone, marca, role, password_hash FROM users WHERE email = ?', [email]);
     const validPassword = user ? await bcrypt.compare(password, user.password_hash) : false;
 
     if (!user || !validPassword) {

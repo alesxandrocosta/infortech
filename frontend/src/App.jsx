@@ -13,8 +13,8 @@ import CustomerPortal from './components/CustomerPortal';
 import SalesPage from './components/SalesPage';
 import './App.css';
 
-const emptyCustomerForm = { nome: '', tipo: 'PF', documento: '', telefone: '', whatsapp: '', email: '', endereco: '', numero: '', cep: '', status: 'Adimplente' };
-const emptyOrderForm = { cliente: '', cliente_id: '', tecnico: '', tecnico_id: '', equipamento: '', status: 'Recebido', orcamento_status: 'pendente', defeito: '', laudo_tecnico: '', servicos_realizados: '', etiquetas: 4, observacao: '', service_ids: [], part_items: [], hardware: {} };
+const emptyCustomerForm = { nome: '', tipo: 'PF', documento: '', telefone: '', email: '', status: 'Adimplente' };
+const emptyOrderForm = { cliente: '', tecnico: '', equipamento: '', status: 'Recebido', defeito: '', etiquetas: 4, observacao: '', service_ids: [], part_items: [] };
 const emptyInventoryForm = { codigo: '', nome: '', categoria: 'Tela', estoque: 0, minimo: 0, preco: 0, specs: {} };
 const emptyServiceForm = { nome: '', categoria: 'Troca', modalidade: 'Presencial', descricao: '', notas: '', tempo: 1, preco: 0 };
 const emptyUserForm = { full_name: '', telefone: '', email: '', username: '', password: '', marca: 'TechFlow', roles: ['tecnico'] };
@@ -22,106 +22,39 @@ const emptyPhysicalInventoryForm = { nome: '', status: 'Em andamento', observaco
 const defaultBrandSettings = { displayName: 'TechFlow', icon: 'TF', logo: '' };
 
 const navigationItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: '▦' },
-  { id: 'clientes', label: 'Clientes', icon: '◉' },
-  { id: 'ordens', label: 'Ordens', icon: '▤' },
-  { id: 'estoque', label: 'Estoque', icon: '▥' },
-  { id: 'servicos', label: 'Serviços', icon: '✦' },
-  { id: 'inventario', label: 'Inventário', icon: '⌗' },
-  { id: 'usuarios', label: 'Usuários', icon: '♙' },
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'clientes', label: 'Clientes' },
+  { id: 'ordens', label: 'Ordens' },
+  { id: 'estoque', label: 'Estoque' },
+  { id: 'servicos', label: 'Serviços' },
+  { id: 'inventario', label: 'Inventário' },
+  { id: 'usuarios', label: 'Usuários' },
 ];
 const backofficeRoles = ['admin', 'gerente', 'administrativo'];
 
 function IndicatorLineChart({ history }) {
   const points = Array.isArray(history) ? history : [];
-  const maxRevenue = Math.max(...points.map((item) => Number(item.revenue || 0)), 1);
-  const chartWidth = 720;
+  const revenueValues = points.map((item) => Number(item.revenue || 0));
+  const maxRevenue = Math.max(...revenueValues, 1);
+  const chartWidth = 640;
   const chartHeight = 180;
-  const padding = 24;
-  const step = points.length > 1 ? (chartWidth - (padding * 2)) / (points.length - 1) : 0;
-  const revenuePoints = points.map((item, index) => {
-    const x = padding + (index * step);
-    const y = chartHeight - padding - ((Number(item.revenue || 0) / maxRevenue) * (chartHeight - (padding * 2)));
+  const chartPoints = points.map((item, index) => {
+    const x = points.length > 1 ? (index / (points.length - 1)) * chartWidth : chartWidth / 2;
+    const y = chartHeight - (Number(item.revenue || 0) / maxRevenue) * (chartHeight - 20) - 10;
     return `${x},${y}`;
   }).join(' ');
 
   return (
     <section className="panel indicator-chart-panel">
       <div className="panel-header compact-header">
-        <div><span className="eyebrow">Últimos dias</span><h2>Indicadores de vendas</h2></div>
-        <span className="chart-legend"><i /> Receita</span>
+        <div><span className="eyebrow">Últimos 7 dias</span><h2>Faturamento</h2></div>
+        <strong>{Number(revenueValues.reduce((total, value) => total + value, 0)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
       </div>
-      {!points.length ? <p className="empty-state">Nenhum indicador disponível.</p> : (
-        <div className="indicator-chart">
-          <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label="Receita dos últimos dias">
-            <polyline className="indicator-chart-line" points={revenuePoints} />
-            {points.map((item, index) => {
-              const x = padding + (index * step);
-              const y = chartHeight - padding - ((Number(item.revenue || 0) / maxRevenue) * (chartHeight - (padding * 2)));
-              return <circle className="indicator-chart-point" key={`${item.day}-${index}`} cx={x} cy={y} r="4"><title>{`${item.day}: R$ ${Number(item.revenue || 0).toFixed(2)}`}</title></circle>;
-            })}
-          </svg>
-          <div className="indicator-chart-labels">{points.map((item, index) => <span key={`${item.day}-label-${index}`}>{String(item.day).slice(5, 10)}</span>)}</div>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function PublicAccessPanel() {
-  const [publicUrl, setPublicUrl] = useState(import.meta.env.VITE_PUBLIC_URL || '');
-  const [publicIp, setPublicIp] = useState('');
-  const [isLoading, setIsLoading] = useState(!import.meta.env.VITE_PUBLIC_URL);
-  const [copyMessage, setCopyMessage] = useState('');
-
-  useEffect(() => {
-    if (import.meta.env.VITE_PUBLIC_URL) return undefined;
-
-    let cancelled = false;
-    const detectPublicAddress = async () => {
-      try {
-        const response = await fetch('https://api4.ipify.org?format=json');
-        if (!response.ok) throw new Error('Falha ao consultar o IP público');
-        const { ip } = await response.json();
-        if (!cancelled && ip) {
-          const port = import.meta.env.VITE_PUBLIC_PORT || window.location.port || '5174';
-          setPublicIp(ip);
-          setPublicUrl(`${window.location.protocol}//${ip}:${port}`);
-        }
-      } catch {
-        if (!cancelled) setPublicUrl('');
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
-
-    detectPublicAddress();
-    return () => { cancelled = true; };
-  }, []);
-
-  const copyPublicUrl = async () => {
-    if (!publicUrl) return;
-    try {
-      await navigator.clipboard.writeText(publicUrl);
-      setCopyMessage('Copiado');
-      window.setTimeout(() => setCopyMessage(''), 1800);
-    } catch {
-      setCopyMessage('Selecione a URL para copiar');
-    }
-  };
-
-  return (
-    <section className="public-access-box" aria-live="polite">
-      <div className="public-access-heading"><span className="eyebrow">Acesso externo</span><span className={`public-access-dot${publicUrl ? ' is-ready' : ''}`} /></div>
-      {isLoading ? <p className="public-access-url">Identificando IPv4 público...</p> : publicUrl ? <><a className="public-access-url" href={publicUrl} target="_blank" rel="noreferrer">{publicUrl}</a><button className="secondary-button public-access-copy" type="button" onClick={copyPublicUrl}>{copyMessage || 'Copiar endereço'}</button></> : <p className="public-access-help">Configure VITE_PUBLIC_URL com o endereço externo do sistema.</p>}
-      <div className="public-access-config">
-        <strong>Configuração do roteador</strong>
-        <span>IP interno: <b>192.168.100.184</b></span>
-        <span>TCP externo 5174 → interno 5174</span>
-        <span>TCP externo 5000 → interno 5000</span>
-        {publicIp && <span>IPv4 público detectado: <b>{publicIp}</b></span>}
-      </div>
-      <small>Se a porta externa for diferente, defina VITE_PUBLIC_URL com a URL final.</small>
+      {points.length ? (
+        <svg className="indicator-chart" viewBox={`0 0 ${chartWidth} ${chartHeight}`} role="img" aria-label="Gráfico de faturamento dos últimos sete dias">
+          <polyline points={chartPoints} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : <p className="empty-state">Sem dados de faturamento no período.</p>}
     </section>
   );
 }
@@ -135,7 +68,6 @@ function App() {
   const [statusMessage, setStatusMessage] = useState('Checklist pronto para revisão');
   const [customers, setCustomers] = useState([]);
   const [customerForm, setCustomerForm] = useState(emptyCustomerForm);
-  const [cepLoading, setCepLoading] = useState(false);
   const [orders, setOrders] = useState([]);
   const [orderForm, setOrderForm] = useState(emptyOrderForm);
   const [orderLabelQuantities, setOrderLabelQuantities] = useState({});
@@ -156,8 +88,6 @@ function App() {
   const [physicalInventoryForm, setPhysicalInventoryForm] = useState(emptyPhysicalInventoryForm);
   const [editingPhysicalInventoryId, setEditingPhysicalInventoryId] = useState(null);
   const [activeSection, setActiveSection] = useState('vendas');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.localStorage.getItem('techflow_sidebar_collapsed') === 'true');
-  const [blackMode, setBlackMode] = useState(() => window.localStorage.getItem('techflow_black_mode') === 'true');
   const [printJob, setPrintJob] = useState(null);
   const [promotionOnly, setPromotionOnly] = useState(false);
   const [promotionMargin, setPromotionMargin] = useState(10);
@@ -297,41 +227,8 @@ function App() {
     setCustomerForm((current) => ({ ...current, [name]: value }));
   };
 
-  const handleCepLookup = async (rawCep) => {
-    const cep = String(rawCep || '').replace(/\D/g, '');
-    if (cep.length !== 8) return;
-    setCepLoading(true);
-    try {
-      const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-      const address = await response.json();
-      if (address.erro) {
-        setStatusMessage('CEP não encontrado');
-        return;
-      }
-      setCustomerForm((current) => ({
-        ...current,
-        cep: `${cep.slice(0, 5)}-${cep.slice(5)}`,
-        endereco: [address.logradouro, address.bairro, address.localidade && address.uf ? `${address.localidade}/${address.uf}` : ''].filter(Boolean).join(', '),
-      }));
-    } catch {
-      setStatusMessage('Não foi possível consultar o CEP');
-    } finally {
-      setCepLoading(false);
-    }
-  };
-
   const handleOrderFormChange = (event) => {
     const { name, value } = event.target;
-    if (name === 'cliente_id') {
-      const customer = customers.find((item) => String(item.id) === String(value));
-      setOrderForm((current) => ({ ...current, cliente_id: value, cliente: customer?.nome || '', equipamento: '' }));
-      return;
-    }
-    if (name === 'tecnico_id') {
-      const technician = users.find((item) => String(item.id) === String(value));
-      setOrderForm((current) => ({ ...current, tecnico_id: value, tecnico: technician?.full_name || '' }));
-      return;
-    }
     setOrderForm((current) => ({ ...current, [name]: value }));
   };
 
@@ -358,8 +255,8 @@ function App() {
   const handleCustomerSubmit = async (event) => {
     event.preventDefault();
 
-    if (!customerForm.nome.trim() || !customerForm.documento.trim() || (!customerForm.telefone.trim() && !customerForm.whatsapp.trim() && !customerForm.email.trim())) {
-      setStatusMessage('Preencha nome, documento e telefone, WhatsApp ou e-mail');
+    if (!customerForm.nome.trim() || !customerForm.documento.trim() || (!customerForm.telefone.trim() && !customerForm.email.trim())) {
+      setStatusMessage('Preencha nome, documento e telefone ou e-mail');
       return;
     }
 
@@ -369,11 +266,7 @@ function App() {
         tipo: customerForm.tipo,
         documento: customerForm.documento,
         telefone: customerForm.telefone,
-        whatsapp: customerForm.whatsapp,
         email: customerForm.email,
-        endereco: customerForm.endereco,
-        numero: customerForm.numero,
-        cep: customerForm.cep,
         status: customerForm.status,
       };
       const response = customersEditingId
@@ -385,7 +278,7 @@ function App() {
       setCustomerForm(emptyCustomerForm);
       setCustomersEditingId(null);
       setStatusMessage(customersEditingId ? 'Cliente atualizado com sucesso' : 'Cliente cadastrado com sucesso');
-    } catch (error) {
+    } catch {
       setStatusMessage(error.message || 'Não foi possível cadastrar o cliente');
     }
   };
@@ -402,19 +295,13 @@ function App() {
     try {
       const payload = {
         cliente: orderForm.cliente,
-        cliente_id: orderForm.cliente_id,
         tecnico: orderForm.tecnico,
-        tecnico_id: orderForm.tecnico_id || null,
         equipamento: orderForm.equipamento,
         defeito: orderForm.defeito,
-        laudo_tecnico: orderForm.laudo_tecnico || '',
-        servicos_realizados: orderForm.servicos_realizados || '',
-        orcamento_status: orderForm.orcamento_status || 'pendente',
         status: orderForm.status,
         observacao: orderForm.observacao || 'OS criada.',
         service_ids: orderForm.service_ids || [],
         part_items: orderForm.part_items || [],
-        hardware: orderForm.hardware || {},
         checklist,
       };
       const response = editingOrderId
@@ -427,7 +314,7 @@ function App() {
       setOrderForm(emptyOrderForm);
       setEditingOrderId(null);
       setStatusMessage(editingOrderId ? 'Ordem atualizada com sucesso' : 'Ordem de serviço criada com sucesso');
-    } catch (error) {
+    } catch {
       setStatusMessage(error.message || 'Não foi possível criar a ordem');
       return false;
     }
@@ -452,36 +339,11 @@ function App() {
     try {
       const response = await api.patch(`/orders/${orderId}/status`, { status, observacao });
       setOrders((current) => current.map((order) => order.id === orderId ? response.data : order));
-      const whatsappNotification = response.notifications?.whatsapp;
-      setStatusMessage(whatsappNotification?.sent
-        ? 'Progresso registrado e mensagem enviada pelo WhatsApp'
-        : 'Progresso registrado, mas a mensagem do WhatsApp não foi enviada');
-      return { order: response.data, whatsappNotification };
+      setStatusMessage('Progresso registrado com sucesso');
+      return response.data;
     } catch (error) {
       setStatusMessage(error.message || 'Não foi possível atualizar a OS');
       return false;
-    }
-  };
-
-  const handleClaimNextOrder = async () => {
-    try {
-      const response = await api.post('/orders/queue/claim-next', {});
-      setOrders((current) => current.map((order) => order.id === response.data.id ? response.data : order));
-      setStatusMessage('Próxima OS da fila assumida com sucesso');
-      return response.data;
-    } catch (error) {
-      setStatusMessage(error.message || 'Não foi possível assumir a próxima OS');
-      return false;
-    }
-  };
-
-  const handleGetContract = async (orderId) => {
-    try {
-      const response = await api.get(`/orders/${orderId}/contract`);
-      return response.data;
-    } catch (error) {
-      setStatusMessage(error.message || 'Não foi possível gerar o contrato');
-      return null;
     }
   };
 
@@ -523,7 +385,6 @@ function App() {
       cliente: form.cliente,
       equipamento: form.equipamento,
       defeito: form.defeito,
-      hardware: form.hardware || {},
       status: 'Recebido',
       observacao: 'OS aberta na frente de loja.',
       etiquetas: 4,
@@ -533,12 +394,6 @@ function App() {
     });
     setOrders((current) => [response.data, ...current]);
     setStatusMessage('OS criada e enviada para a fila de atendimento');
-    return response.data;
-  };
-
-  const handleHardwareValidation = async (orderId, hardware) => {
-    const response = await api.post(`/orders/${orderId}/hardware-validation`, hardware);
-    if (response?.data?.order) setOrders((current) => current.map((order) => order.id === orderId ? response.data.order : order));
     return response.data;
   };
 
@@ -572,37 +427,6 @@ function App() {
     } catch (error) {
       setStatusMessage(error.message || 'Não foi possível cadastrar a peça');
     }
-  };
-
-  const handleReadLocalHardware = async () => {
-    const response = await api.get('/inventory/hardware/local');
-    return response.data;
-  };
-
-  const handleSaveLocalHardware = async (hardware) => {
-    const equipmentId = String(hardware.ID_Equipamento || '').trim().toUpperCase();
-    const sku = `HW-${equipmentId || Date.now()}`.slice(0, 50);
-    const name = `${hardware.Fabricante || 'Computador'} ${hardware.Modelo || 'identificado localmente'}`.trim();
-    const specs = {
-      ...hardware,
-      Campos_Personalizados: hardware.Campos_Personalizados || {},
-    };
-    delete specs.preco;
-    delete specs.estoque;
-    delete specs.minimo;
-    const response = await api.post('/inventory', {
-      codigo: sku,
-      nome: name,
-      categoria: 'Outro',
-      equipamento_tipo: 'Computador',
-      estoque: hardware.estoque,
-      minimo: hardware.minimo,
-      preco: hardware.preco,
-      specs,
-    });
-    setInventory((current) => [response.data, ...current]);
-    setStatusMessage('Configuração local cadastrada no inventário');
-    return response.data;
   };
 
   const handleServiceSubmit = async (event) => {
@@ -671,21 +495,13 @@ function App() {
       }
       setStatusMessage('Serviço excluído com sucesso');
     } catch (error) {
-      if (error.message === 'Serviço não encontrado.') {
-        setServices((current) => current.filter((service) => service.id !== serviceId));
-        if (editingServiceId === serviceId) {
-          handleCancelServiceEdit();
-        }
-        setStatusMessage('O serviço já havia sido removido');
-        return;
-      }
       setStatusMessage(error.message || 'Não foi possível excluir o serviço');
     }
   };
 
   const handleEditCustomer = (customer) => {
     setCustomersEditingId(customer.id);
-    setCustomerForm({ nome: customer.nome || '', tipo: customer.tipo || 'PF', documento: customer.documento || '', telefone: customer.telefone || '', whatsapp: customer.whatsapp || '', email: customer.email || '', endereco: customer.endereco || '', numero: customer.numero || '', cep: customer.cep || '', status: customer.status || 'Adimplente' });
+    setCustomerForm({ nome: customer.nome || '', tipo: customer.tipo || 'PF', documento: customer.documento || '', telefone: customer.telefone || '', email: customer.email || '', status: customer.status || 'Adimplente' });
   };
 
   const handleDeleteCustomer = async (customerId) => {
@@ -699,7 +515,7 @@ function App() {
 
   const handleEditOrder = (order) => {
     setEditingOrderId(order.id);
-    setOrderForm({ cliente: order.cliente || '', cliente_id: order.cliente_id || '', tecnico: order.tecnico || '', tecnico_id: order.tecnico_id || '', equipamento: order.equipamento || '', status: order.status || 'Recebido', orcamento_status: order.orcamento_status || 'pendente', defeito: order.defeito || '', laudo_tecnico: order.laudo_tecnico || '', servicos_realizados: order.servicos_realizados || '', observacao: '', etiquetas: orderLabelQuantities[order.id] || 4, service_ids: [], part_items: [], hardware: { hwid_equipamento: order.hwid_equipamento || '', serial_bios: order.serial_bios || '', uuid_sistema: order.uuid_sistema || '', mac_rede: order.mac_rede || '', serial_disco: order.serial_disco || '', especificacoes_json: order.especificacoes_json || {} } });
+    setOrderForm({ cliente: order.cliente || '', tecnico: order.tecnico || '', equipamento: order.equipamento || '', status: order.status || 'Recebido', defeito: order.defeito || '', observacao: '', etiquetas: orderLabelQuantities[order.id] || 4, service_ids: [], part_items: [] });
     if (Array.isArray(order.checklist) && order.checklist.length) setChecklist(order.checklist);
   };
 
@@ -793,22 +609,6 @@ function App() {
     setActiveSection(sectionId);
   };
 
-  const toggleSidebar = () => {
-    setSidebarCollapsed((current) => {
-      const next = !current;
-      window.localStorage.setItem('techflow_sidebar_collapsed', String(next));
-      return next;
-    });
-  };
-
-  const toggleBlackMode = () => {
-    setBlackMode((current) => {
-      const next = !current;
-      window.localStorage.setItem('techflow_black_mode', String(next));
-      return next;
-    });
-  };
-
   const activeNavigationItem = navigationItems.find((item) => item.id === activeSection);
 
   const dashboardView = (
@@ -828,7 +628,6 @@ function App() {
               {saving ? 'Salvando...' : 'Atualizar rotina'}
             </button>
           </div>
-          <PublicAccessPanel />
         </aside>
       </div>
       <IndicatorLineChart history={indicatorHistory} />
@@ -846,8 +645,6 @@ function App() {
         onEdit={handleEditCustomer}
         onDelete={handleDeleteCustomer}
         onCancelEdit={() => { setCustomersEditingId(null); setCustomerForm(emptyCustomerForm); }}
-        onCepLookup={handleCepLookup}
-        cepLoading={cepLoading}
       />
     ),
     ordens: (
@@ -864,18 +661,12 @@ function App() {
         onCancelEdit={resetOrderForm}
         onPrintLabels={handlePrintLabels}
         onProgressUpdate={handleProgressUpdate}
-        onClaimNext={handleClaimNextOrder}
-        onGetContract={handleGetContract}
-        currentUserRole={session?.role}
         onChecklistStatusChange={handleStatusChange}
         onChecklistAddItem={handleAddItem}
         onChecklistRemoveItem={handleRemoveItem}
         onLoadHistory={handleLoadOrderHistory}
-        onHardwareValidation={handleHardwareValidation}
         services={services}
         parts={inventory}
-        customers={customers}
-        users={users}
       />
     ),
     estoque: (
@@ -892,13 +683,14 @@ function App() {
         onDelete={handleDeleteInventory}
         onCancelEdit={() => { setEditingInventoryId(null); setInventoryForm(emptyInventoryForm); }}
         onSell={handleSellInventory}
-        onReadLocalHardware={handleReadLocalHardware}
-        onSaveLocalHardware={handleSaveLocalHardware}
       />
     ),
     servicos: (
       <ServicePanel
-        services={services}
+        services={services.length ? services : [
+          { id: 1, nome: 'Troca de tela', categoria: 'Troca', tempo_estimado_horas: 2.5, preco_sugerido: 220.00 },
+          { id: 2, nome: 'Diagnóstico técnico', categoria: 'Diagnóstico', tempo_estimado_horas: 1.0, preco_sugerido: 90.00 },
+        ]}
         form={serviceForm}
         editingId={editingServiceId}
         onChange={handleServiceFormChange}
@@ -944,9 +736,8 @@ function App() {
   const visibleNavigationItems = session.role && backofficeRoles.includes(session.role) ? navigationItems : [];
 
   return (
-    <div className={`app-shell ${blackMode ? 'black-mode' : ''} ${sidebarCollapsed ? 'sidebar-collapsed-shell' : ''}`}>
-      <aside className={`sidebar ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-        <button className="sidebar-toggle" type="button" onClick={toggleSidebar} aria-label={sidebarCollapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'} title={sidebarCollapsed ? 'Expandir barra lateral' : 'Recolher barra lateral'}>{sidebarCollapsed ? '»' : '«'}</button>
+    <div className="app-shell">
+      <aside className="sidebar">
         <div className="brand-block">
           <div className="brand-mark">{brandSettings.logo ? <img src={brandSettings.logo} alt="Logomarca" /> : brandSettings.icon}</div>
           <div>
@@ -956,7 +747,7 @@ function App() {
         </div>
 
         <nav className="nav-group" aria-label="Navegação principal">
-          <button className={activeSection === 'vendas' ? 'nav-active' : ''} onClick={() => handleNavigation('vendas')} type="button"><span className="nav-icon">$</span><span className="nav-label">Vendas</span></button>
+          <button className={activeSection === 'vendas' ? 'nav-active' : ''} onClick={() => handleNavigation('vendas')} type="button">Vendas</button>
           {visibleNavigationItems.map((item) => (
             <button
               key={item.id}
@@ -964,17 +755,10 @@ function App() {
               onClick={() => handleNavigation(item.id)}
               type="button"
             >
-              <span className="nav-icon">{item.icon}</span><span className="nav-label">{item.label}</span>
+              {item.label}
             </button>
           ))}
         </nav>
-        <div className="sidebar-tools">
-          <button type="button" onClick={toggleBlackMode} aria-pressed={blackMode} title={blackMode ? 'Desativar versão black' : 'Ativar versão black'}><span className="nav-icon">●</span><span className="nav-label">{blackMode ? 'Tema padrão' : 'Versão black'}</span></button>
-        </div>
-        <div className="sidebar-footer">
-          <div className="sidebar-user"><strong>{session.full_name}</strong><span>{session.role}</span></div>
-          <button className="logout-button" type="button" onClick={handleLogout} title="Sair"><span className="nav-icon">↪</span><span className="nav-label">Sair</span></button>
-        </div>
       </aside>
 
       <main className="main-panel">
@@ -983,7 +767,7 @@ function App() {
             <p className="eyebrow">Módulo ativo</p>
             <h2>{activeSection === 'vendas' ? 'Vendas' : activeNavigationItem?.label || 'Dashboard'}</h2>
           </div>
-          <div className="topbar-context">{activeSection === 'vendas' ? 'Frente de loja' : 'Bancada operacional'}</div>
+          <div className="session-controls"><div className="user-pill">{session.full_name} • {session.role}</div><button className="logout-button" type="button" onClick={handleLogout}>Sair</button></div>
         </header>
 
         {activeSection === 'dashboard' && (

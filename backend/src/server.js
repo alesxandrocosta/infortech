@@ -13,29 +13,14 @@ const customerPortalRoutes = require('./routes/customerPortal');
 const salesRoutes = require('./routes/sales');
 const dashboardRoutes = require('./routes/dashboard');
 const { requireAuth, requireRoles } = require('./middleware/auth');
-const { getWhatsAppStatus, initializeWhatsApp } = require('./services/whatsapp');
 
 const app = express();
 const port = process.env.PORT || 5000;
-const configuredCorsOrigins = (process.env.CORS_ORIGIN || 'http://0.0.0.0:5173')
+const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
-const allowAnyCorsOrigin = process.env.CORS_ALLOW_ALL === 'true';
-
-function isPrivateNetworkOrigin(origin) {
-  try {
-    const url = new URL(origin);
-    return url.protocol === 'http:' && (
-      /^(localhost|127\.0\.0\.1)$/.test(url.hostname)
-      || /^10\.(?:\d{1,3}\.){2}\d{1,3}$/.test(url.hostname)
-      || /^192\.168\.(?:\d{1,3}\.)\d{1,3}$/.test(url.hostname)
-      || /^172\.(?:1[6-9]|2\d|3[0-1])\.(?:\d{1,3}\.)\d{1,3}$/.test(url.hostname)
-    );
-  } catch {
-    return false;
-  }
-}
+const localCorsOrigins = ['http://localhost:5173', 'http://127.0.0.1:5173', 'http://0.0.0.0:5173'];
 
 const DEFAULT_CHECKLIST = [
   { id: 1, item: 'Carcaça', estado: 'OK' },
@@ -49,11 +34,11 @@ const DEFAULT_CHECKLIST = [
 ];
 
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowAnyCorsOrigin || configuredCorsOrigins.includes(origin) || isPrivateNetworkOrigin(origin)) {
+  origin: (requestOrigin, callback) => {
+    if (!requestOrigin || corsOrigins.includes(requestOrigin) || localCorsOrigins.includes(requestOrigin)) {
       return callback(null, true);
     }
-    return callback(new Error('Origem não permitida pelo CORS'));
+    return callback(new Error('Origin not allowed by CORS'));
   },
   credentials: true,
 }));
@@ -73,7 +58,6 @@ app.get('/api/health', (_req, res) => {
     success: true,
     service: 'TechFlow ERP',
     status: 'online',
-    whatsapp: getWhatsAppStatus(),
     timestamp: new Date().toISOString(),
   });
 });
@@ -107,8 +91,6 @@ app.use((error, _req, res, _next) => {
   });
 });
 
-initializeWhatsApp();
-
-app.listen(port, '0.0.0.0', () => {
-  console.log(`TechFlow ERP backend running on http://0.0.0.0:${port}`);
+app.listen(port, () => {
+  console.log(`TechFlow ERP backend running on http://localhost:${port}`);
 });
