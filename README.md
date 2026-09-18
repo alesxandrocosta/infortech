@@ -88,6 +88,8 @@ npm run init-db
 
 Para instalar as dependências e inicializar o banco no mesmo passo, use `./scripts/install-dependencies.ps1 -InitializeDatabase` depois de configurar as credenciais no `.env`.
 
+O procedimento completo de implantação está em [docs/MANUAL_IMPLANTACAO_PRODUCAO.md](docs/MANUAL_IMPLANTACAO_PRODUCAO.md).
+
 ### Cadastro e avisos por WhatsApp Web
 
 O cadastro de clientes possui telefone, WhatsApp, CEP, número da casa e endereço. O CEP é consultado automaticamente pelo ViaCEP.

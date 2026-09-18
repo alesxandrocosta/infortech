@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const API = 'http://localhost:5000/api/customer-portal';
+const API = `${import.meta.env.VITE_API_URL || `${window.location.protocol}//${window.location.hostname}:5000`}/api/customer-portal`;
 
 async function portalRequest(path, options = {}, token = '') {
   const response = await fetch(`${API}${path}`, { headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, ...options });

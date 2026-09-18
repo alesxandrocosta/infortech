@@ -1,6 +1,7 @@
 require('express-async-errors');
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const dotenv = require('dotenv');
 dotenv.config();
 const authRoutes = require('./routes/auth');
@@ -16,6 +17,8 @@ const { requireAuth, requireRoles } = require('./middleware/auth');
 
 const app = express();
 const port = process.env.PORT || 5000;
+app.disable('x-powered-by');
+app.use(helmet());
 const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173')
   .split(',')
   .map((origin) => origin.trim())

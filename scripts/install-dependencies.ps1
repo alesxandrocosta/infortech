@@ -52,7 +52,7 @@ Write-Host 'Instalando dependências da raiz...'
 Invoke-Npm -WorkingDirectory $root -Arguments @('ci')
 
 Write-Host 'Instalando dependências do backend...'
-Invoke-Npm -WorkingDirectory $backendPath -Arguments @('install')
+Invoke-Npm -WorkingDirectory $backendPath -Arguments @('ci')
 
 Write-Host 'Instalando dependências do frontend...'
 Invoke-Npm -WorkingDirectory $frontendPath -Arguments @('ci')
