@@ -16,7 +16,7 @@ export default function ServicePanel({ services, form, editingId, onChange, onSu
         <div className="form-grid">
           <label>
             Nome do serviço
-            <input name="nome" value={form.nome} onChange={onChange} placeholder="Troca de tela" required minLength="2" />
+            <input name="nome" value={form.nome} onChange={onChange} placeholder="Nome do serviço" required minLength="2" />
           </label>
 
           <label>

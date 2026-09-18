@@ -684,10 +684,7 @@ function App() {
     ),
     servicos: (
       <ServicePanel
-        services={services.length ? services : [
-          { id: 1, nome: 'Troca de tela', categoria: 'Troca', tempo_estimado_horas: 2.5, preco_sugerido: 220.00 },
-          { id: 2, nome: 'Diagnóstico técnico', categoria: 'Diagnóstico', tempo_estimado_horas: 1.0, preco_sugerido: 90.00 },
-        ]}
+        services={services}
         form={serviceForm}
         editingId={editingServiceId}
         onChange={handleServiceFormChange}
