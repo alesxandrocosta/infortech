@@ -16,7 +16,7 @@ const basicFields = [
   ['Armazenamento', 'Armazenamento'],
 ];
 
-export default function LocalHardwareModal({ onClose, onRead, onSave }) {
+export default function LocalHardwareModal({ onClose, onRead, onSave, onPrint }) {
   const [data, setData] = useState(null);
   const [customFields, setCustomFields] = useState([]);
   const [fieldName, setFieldName] = useState('');
@@ -49,6 +49,18 @@ export default function LocalHardwareModal({ onClose, onRead, onSave }) {
     } catch (error) { setMessage(error.message || 'Não foi possível salvar no inventário.'); } finally { setLoading(false); }
   };
 
+  const print = async () => {
+    setLoading(true);
+    try {
+      await onPrint({ ...data, Campos_Personalizados: Object.fromEntries(customFields.map((item) => [item.name, item.value])) });
+      setMessage('Uma etiqueta 100 x 150 mm foi enviada para a impressora LABEL do host.');
+    } catch (error) {
+      setMessage(error.message || 'Não foi possível enviar a etiqueta para impressão.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="modal-panel hardware-modal" role="dialog" aria-modal="true" aria-labelledby="hardware-modal-title">
@@ -60,7 +72,7 @@ export default function LocalHardwareModal({ onClose, onRead, onSave }) {
           <div className="hardware-modal-grid">{basicFields.map(([key, label]) => <label key={key}>{label}<input value={data[key] || ''} onChange={(event) => setData((current) => ({ ...current, [key]: event.target.value }))} /></label>)}</div>
           <div className="hardware-custom-fields"><strong>Campos adicionais</strong><div className="hardware-custom-add"><input value={fieldName} onChange={(event) => setFieldName(event.target.value)} placeholder="Nome do campo" /><input value={fieldValue} onChange={(event) => setFieldValue(event.target.value)} placeholder="Valor" /><button className="secondary-button" type="button" onClick={addField}>Adicionar</button></div>{customFields.map((field, index) => <div className="hardware-custom-row" key={`${field.name}-${index}`}><span>{field.name}</span><strong>{field.value || 'Não informado'}</strong><button className="ghost-button" type="button" onClick={() => setCustomFields((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Remover</button></div>)}</div>
           <div className="hardware-save-fields"><label>Preço de venda<input type="number" min="0.01" step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Informe o preço" /></label><label>Estoque inicial<input type="number" min="0" value={stock} onChange={(event) => setStock(event.target.value)} /></label><label>Estoque mínimo<input type="number" min="0" value={minimum} onChange={(event) => setMinimum(event.target.value)} /></label></div>
-          <div className="form-actions"><button className="secondary-button" type="button" onClick={onClose}>Cancelar</button><button className="primary-button" type="button" onClick={save} disabled={loading}>{loading ? 'Salvando...' : 'Cadastrar no inventário'}</button></div>
+          <div className="form-actions"><button className="secondary-button" type="button" onClick={onClose}>Cancelar</button><button className="secondary-button" type="button" onClick={print} disabled={loading}>{loading ? 'Processando...' : 'Imprimir etiqueta 100 x 150 mm'}</button><button className="primary-button" type="button" onClick={save} disabled={loading}>{loading ? 'Salvando...' : 'Cadastrar no inventário'}</button></div>
         </>}
       </div>
     </div>

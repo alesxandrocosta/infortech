@@ -448,6 +448,12 @@ function App() {
     return response.data;
   };
 
+  const handlePrintLocalHardware = async (hardware) => {
+    const response = await api.post('/inventory/hardware/local/print', hardware);
+    if (!response?.success) throw new Error('Nao foi possivel enviar a etiqueta para impressao.');
+    return response.data;
+  };
+
   const handleServiceSubmit = async (event) => {
     event.preventDefault();
 
@@ -701,6 +707,7 @@ function App() {
         onSell={handleSellInventory}
         onReadLocalHardware={handleReadLocalHardware}
         onSaveLocalHardware={handleSaveLocalHardware}
+        onPrintLocalHardware={handlePrintLocalHardware}
       />
     ),
     servicos: (

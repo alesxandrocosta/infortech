@@ -69,6 +69,70 @@ router.get('/inventory/hardware/local', requireRoles('admin', 'gerente', 'admini
   }
 });
 
+router.post('/inventory/hardware/local/print', requireRoles('admin', 'gerente', 'administrativo', 'atendente'), async (req, res) => {
+  if (process.platform !== 'win32') {
+    return res.status(501).json({ success: false, error: { code: 'WINDOWS_REQUIRED', message: 'A impressao direta esta disponivel somente no Windows.' } });
+  }
+
+  const payload = Buffer.from(JSON.stringify(req.body || {}), 'utf8').toString('base64');
+  const printerName = process.env.LABEL_PRINTER_NAME || 'LABEL';
+  const script = `
+    param([string]$JsonBase64, [string]$PrinterName)
+    Add-Type -AssemblyName System.Drawing
+    $json = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($JsonBase64))
+    $data = $json | ConvertFrom-Json
+    $document = New-Object System.Drawing.Printing.PrintDocument
+    $document.PrinterSettings.PrinterName = $PrinterName
+    if (-not $document.PrinterSettings.IsValid) { throw "Impressora nao encontrada: $PrinterName" }
+    $document.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(0, 0, 0, 0)
+    $document.DefaultPageSettings.PaperSize = New-Object System.Drawing.Printing.PaperSize('Label100x150mm', 394, 591)
+    $printPageHandler = [System.Drawing.Printing.PrintPageEventHandler]{
+      param($sender, $event)
+      $fontTitle = [System.Drawing.Font]::new('Arial', 16, [System.Drawing.FontStyle]::Bold)
+      $fontLabel = [System.Drawing.Font]::new('Arial', 8, [System.Drawing.FontStyle]::Bold)
+      $fontValue = [System.Drawing.Font]::new('Arial', 10, [System.Drawing.FontStyle]::Regular)
+      $brush = [System.Drawing.Brushes]::Black
+      $y = 12
+      $event.Graphics.DrawString('TECHFLOW ERP', $fontTitle, $brush, 12, $y)
+      $y += 32
+      $event.Graphics.DrawString('ETIQUETA DE EQUIPAMENTO', $fontLabel, $brush, 12, $y)
+      $y += 24
+      $rows = @(
+        @('ID', [string]$data.ID_Equipamento),
+        @('Fabricante', [string]$data.Fabricante),
+        @('Modelo', [string]$data.Modelo),
+        @('Processador', [string]$data.Processador),
+        @('Memoria RAM', [string]$data.Memoria_RAM),
+        @('Sistema', [string]$data.Sistema_Operacional),
+        @('Versao', [string]$data.Versao_SO),
+        @('Serial BIOS', [string]$data.Serial_BIOS),
+        @('UUID', [string]$data.UUID_Sistema),
+        @('Armazenamento', [string]$data.Armazenamento)
+      )
+      foreach ($row in $rows) {
+        $event.Graphics.DrawString($row[0], $fontLabel, $brush, 12, $y)
+        $y += 13
+        $event.Graphics.DrawString(($row[1] -replace '\\s+', ' ').Trim(), $fontValue, $brush, 12, $y, [System.Drawing.StringFormat]::GenericDefault)
+        $y += 26
+        if ($y -gt 555) { break }
+      }
+      $event.Graphics.DrawString((Get-Date -Format 'yyyy-MM-dd HH:mm'), $fontLabel, $brush, 12, 570)
+      $event.HasMorePages = $false
+    }
+    $document.add_PrintPage($printPageHandler)
+    $document.Print()
+    $document.Dispose()
+  `;
+
+  try {
+    await execFileAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script, '-JsonBase64', payload, '-PrinterName', printerName], { windowsHide: true, timeout: 15000, maxBuffer: 1024 * 1024 });
+    return res.json({ success: true, data: { printer: printerName, labels: 1, size: '100x150mm' }, message: 'Uma etiqueta enviada para a impressora.' });
+  } catch (error) {
+    console.error('Local hardware print error:', error.message);
+    return res.status(502).json({ success: false, error: { code: 'HARDWARE_PRINT_ERROR', message: `Nao foi possivel imprimir na fila ${printerName}.` } });
+  }
+});
+
 router.post('/inventory/:id/movements', requireRoles('admin', 'gerente', 'administrativo', 'atendente'), async (req, res) => {
   const quantity = Math.max(1, Number(req.body?.quantidade) || 1);
   const item = await queryOne('SELECT id, preco_venda, quantidade_estoque FROM product_parts WHERE id = ? AND ativo = TRUE', [req.params.id]);
