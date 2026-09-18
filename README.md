@@ -107,6 +107,8 @@ powershell -ExecutionPolicy Bypass -File .\cliente-agent.ps1
 
 O agente local fica em `http://localhost:5310`, coleta o hardware do cliente e também executa o `cliente.ps1` quando o botão de impressão é acionado. Sem o agente, o navegador não consegue permitir que o servidor remoto leia o hardware local.
 
+Use o botão **Cadastrar máquina e imprimir** no modal. Ele só conclui a operação depois de enviar a etiqueta e registrar a máquina no banco. O ID `HW-<ID_Equipamento>` evita duplicar o mesmo computador em novos atendimentos.
+
 ### Cadastro e avisos por WhatsApp Web
 
 O cadastro de clientes possui telefone, WhatsApp, CEP, número da casa e endereço. O CEP é consultado automaticamente pelo ViaCEP.

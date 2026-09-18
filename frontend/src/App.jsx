@@ -436,25 +436,20 @@ function App() {
     return payload.data;
   };
 
-  const handleSaveLocalHardware = async (hardware) => {
-    const equipmentId = String(hardware.ID_Equipamento || '').trim().toUpperCase();
-    const sku = `HW-${equipmentId || Date.now()}`.slice(0, 50);
-    const name = `${hardware.Fabricante || 'Computador'} ${hardware.Modelo || 'identificado localmente'}`.trim();
-    const specs = { ...hardware, Campos_Personalizados: hardware.Campos_Personalizados || {} };
-    delete specs.preco;
-    delete specs.estoque;
-    delete specs.minimo;
-    const response = await api.post('/inventory', { codigo: sku, nome: name, categoria: 'Outro', equipamento_tipo: 'Computador', estoque: hardware.estoque, minimo: hardware.minimo, preco: hardware.preco, specs });
-    setInventory((current) => [response.data, ...current]);
-    setStatusMessage('Configuracao local cadastrada no inventario');
-    return response.data;
-  };
-
   const handlePrintLocalHardware = async (hardware) => {
     const response = await fetch('http://localhost:5310/print', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(hardware) });
     const payload = await response.json();
     if (!response.ok || !payload?.success) throw new Error(payload?.error || 'Nao foi possivel enviar a etiqueta para impressao.');
     return payload.data;
+  };
+
+  const handleRegisterAndPrintLocalHardware = async (hardware) => {
+    await handlePrintLocalHardware(hardware);
+    const response = await api.post('/inventory/hardware/local/register', hardware);
+    if (!response?.success) throw new Error('A etiqueta foi enviada, mas o cadastro no banco falhou.');
+    setInventory((current) => [response.data, ...current.filter((item) => item.id !== response.data.id)]);
+    setStatusMessage('Máquina cadastrada no banco e etiqueta enviada para impressão');
+    return response.data;
   };
 
   const handleServiceSubmit = async (event) => {
@@ -709,8 +704,8 @@ function App() {
         onCancelEdit={() => { setEditingInventoryId(null); setInventoryForm(emptyInventoryForm); }}
         onSell={handleSellInventory}
         onReadLocalHardware={handleReadLocalHardware}
-        onSaveLocalHardware={handleSaveLocalHardware}
         onPrintLocalHardware={handlePrintLocalHardware}
+        onRegisterAndPrintLocalHardware={handleRegisterAndPrintLocalHardware}
       />
     ),
     servicos: (

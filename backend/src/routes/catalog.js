@@ -96,6 +96,26 @@ router.post('/inventory/hardware/local/print', requireRoles('admin', 'gerente', 
   }
 });
 
+router.post('/inventory/hardware/local/register', requireRoles('admin', 'gerente', 'administrativo', 'atendente'), async (req, res) => {
+  const hardware = req.body && typeof req.body === 'object' ? req.body : {};
+  const equipmentId = String(hardware.ID_Equipamento || hardware.Serial_BIOS || hardware.UUID_Sistema || '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+  if (!equipmentId) return res.status(400).json({ success: false, error: { code: 'HARDWARE_ID_REQUIRED', message: 'A máquina não possui ID, serial BIOS ou UUID identificável.' } });
+
+  const sku = `HW-${equipmentId}`.slice(0, 50);
+  const name = `${String(hardware.Fabricante || 'Computador').trim()} ${String(hardware.Modelo || 'identificado localmente').trim()}`.trim();
+  const specs = JSON.stringify({ ...hardware, origem: 'agente-local', cadastrado_por: req.user.id });
+  const existing = await queryOne('SELECT id FROM product_parts WHERE codigo_sku = ?', [sku]);
+
+  if (existing) {
+    await query('UPDATE product_parts SET nome = ?, equipamento_tipo = ?, technical_specs = ?, ativo = TRUE WHERE id = ?', [name, 'Universal', specs, existing.id]);
+  } else {
+    await query('INSERT INTO product_parts (id, codigo_sku, nome, categoria, condicao, equipamento_tipo, technical_specs, quantidade_estoque, quantidade_minima, preco_venda, ativo) VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, 0, TRUE)', [randomUUID(), sku, name, 'Outro', 'Nova', 'Universal', specs]);
+  }
+
+  const registered = await queryOne(`SELECT ${partFields} FROM product_parts WHERE codigo_sku = ?`, [sku]);
+  return res.status(existing ? 200 : 201).json({ success: true, data: registered, message: existing ? 'Computador atualizado no banco.' : 'Computador cadastrado no banco.' });
+});
+
 router.post('/inventory/:id/movements', requireRoles('admin', 'gerente', 'administrativo', 'atendente'), async (req, res) => {
   const quantity = Math.max(1, Number(req.body?.quantidade) || 1);
   const item = await queryOne('SELECT id, preco_venda, quantidade_estoque FROM product_parts WHERE id = ? AND ativo = TRUE', [req.params.id]);

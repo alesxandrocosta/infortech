@@ -16,14 +16,11 @@ const basicFields = [
   ['Armazenamento', 'Armazenamento'],
 ];
 
-export default function LocalHardwareModal({ onClose, onRead, onSave, onPrint }) {
+export default function LocalHardwareModal({ onClose, onRead, onPrint, onRegisterAndPrint }) {
   const [data, setData] = useState(null);
   const [customFields, setCustomFields] = useState([]);
   const [fieldName, setFieldName] = useState('');
   const [fieldValue, setFieldValue] = useState('');
-  const [price, setPrice] = useState('');
-  const [stock, setStock] = useState('1');
-  const [minimum, setMinimum] = useState('0');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
@@ -40,15 +37,6 @@ export default function LocalHardwareModal({ onClose, onRead, onSave, onPrint })
     setFieldValue('');
   };
 
-  const save = async () => {
-    if (!data || !Number(price) || Number(price) <= 0) { setMessage('Informe um preço de venda maior que zero para salvar no inventário.'); return; }
-    setLoading(true);
-    try {
-      await onSave({ ...data, Campos_Personalizados: Object.fromEntries(customFields.map((item) => [item.name, item.value])), preco: Number(price), estoque: Number(stock), minimo: Number(minimum) });
-      onClose();
-    } catch (error) { setMessage(error.message || 'Não foi possível salvar no inventário.'); } finally { setLoading(false); }
-  };
-
   const print = async () => {
     setLoading(true);
     try {
@@ -56,6 +44,19 @@ export default function LocalHardwareModal({ onClose, onRead, onSave, onPrint })
       setMessage('Uma etiqueta 100 x 150 mm foi enviada para a pasta monitorada do host.');
     } catch (error) {
       setMessage(error.message || 'Não foi possível enviar a etiqueta para impressão.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const registerAndPrint = async () => {
+    setLoading(true);
+    try {
+      const hardware = { ...data, Campos_Personalizados: Object.fromEntries(customFields.map((item) => [item.name, item.value])) };
+      await onRegisterAndPrint(hardware);
+      setMessage('Máquina cadastrada no banco e etiqueta enviada para impressão.');
+    } catch (error) {
+      setMessage(error.message || 'Não foi possível cadastrar e imprimir esta máquina.');
     } finally {
       setLoading(false);
     }
@@ -71,8 +72,7 @@ export default function LocalHardwareModal({ onClose, onRead, onSave, onPrint })
         {data && <>
           <div className="hardware-modal-grid">{basicFields.map(([key, label]) => <label key={key}>{label}<input value={data[key] || ''} onChange={(event) => setData((current) => ({ ...current, [key]: event.target.value }))} /></label>)}</div>
           <div className="hardware-custom-fields"><strong>Campos adicionais</strong><div className="hardware-custom-add"><input value={fieldName} onChange={(event) => setFieldName(event.target.value)} placeholder="Nome do campo" /><input value={fieldValue} onChange={(event) => setFieldValue(event.target.value)} placeholder="Valor" /><button className="secondary-button" type="button" onClick={addField}>Adicionar</button></div>{customFields.map((field, index) => <div className="hardware-custom-row" key={`${field.name}-${index}`}><span>{field.name}</span><strong>{field.value || 'Não informado'}</strong><button className="ghost-button" type="button" onClick={() => setCustomFields((current) => current.filter((_, itemIndex) => itemIndex !== index))}>Remover</button></div>)}</div>
-          <div className="hardware-save-fields"><label>Preço de venda<input type="number" min="0.01" step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} placeholder="Informe o preço" /></label><label>Estoque inicial<input type="number" min="0" value={stock} onChange={(event) => setStock(event.target.value)} /></label><label>Estoque mínimo<input type="number" min="0" value={minimum} onChange={(event) => setMinimum(event.target.value)} /></label></div>
-          <div className="form-actions"><button className="secondary-button" type="button" onClick={onClose}>Cancelar</button><button className="secondary-button" type="button" onClick={print} disabled={loading}>{loading ? 'Processando...' : 'Imprimir etiqueta 100 x 150 mm'}</button><button className="primary-button" type="button" onClick={save} disabled={loading}>{loading ? 'Salvando...' : 'Cadastrar no inventário'}</button></div>
+          <div className="form-actions"><button className="secondary-button" type="button" onClick={onClose}>Cancelar</button><button className="secondary-button" type="button" onClick={print} disabled={loading}>{loading ? 'Processando...' : 'Imprimir etiqueta'}</button><button className="primary-button" type="button" onClick={registerAndPrint} disabled={loading}>{loading ? 'Cadastrando...' : 'Cadastrar máquina e imprimir'}</button></div>
         </>}
       </div>
     </div>
