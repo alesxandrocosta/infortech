@@ -431,7 +431,7 @@ function App() {
 
   const handleReadLocalHardware = async () => {
     try {
-      const response = await fetch('http://0.0.0.0:5310/hardware');
+      const response = await fetch('http://localhost:5310/hardware');
       const payload = await response.json();
       if (!response.ok || !payload?.success) throw new Error(payload?.error || 'O agente local retornou um erro.');
       return payload.data;
@@ -444,7 +444,7 @@ function App() {
   };
 
   const handlePrintLocalHardware = async (hardware) => {
-    const response = await fetch('http://0.0.0.0:5310/print', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(hardware) });
+    const response = await fetch('http://localhost:5310/print', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(hardware) });
     const payload = await response.json();
     if (!response.ok || !payload?.success) throw new Error(payload?.error || 'Nao foi possivel enviar a etiqueta para impressao.');
     return payload.data;

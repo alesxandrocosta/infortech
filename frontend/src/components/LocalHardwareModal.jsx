@@ -66,7 +66,7 @@ export default function LocalHardwareModal({ onClose, onRead, onPrint, onRegiste
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="modal-panel hardware-modal" role="dialog" aria-modal="true" aria-labelledby="hardware-modal-title">
         <div className="modal-header"><div><span className="eyebrow">Inventário local</span><h2 id="hardware-modal-title">Ler configuração deste computador</h2></div><button className="ghost-button" type="button" onClick={onClose}>Fechar</button></div>
-        <p className="panel-subtitle">A leitura é feita pelo agente desta máquina em http://0.0.0.0:5310. Execute iniciar-cliente-agent.cmd antes de ler.</p>
+        <p className="panel-subtitle">A leitura é feita pelo agente desta máquina em http://localhost:5310. Execute iniciar-cliente-agent.cmd antes de ler.</p>
         {!data && <button className="primary-button" type="button" onClick={readLocal} disabled={loading}>{loading ? 'Lendo máquina local...' : 'Ler configuração desta máquina'}</button>}
         {message && <p className="hardware-modal-message">{message}</p>}
         {data && <>

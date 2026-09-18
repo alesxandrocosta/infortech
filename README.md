@@ -105,9 +105,9 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\iniciar-cliente-agent.cmd
 ```
 
-O agente local atende em `http://0.0.0.0:5310` (escuta todas as interfaces), coleta o hardware do cliente e também executa o `cliente.ps1` quando o botão de impressão é acionado. Sem o agente, o navegador não consegue permitir que o servidor remoto leia o hardware local.
+O agente local escuta todas as interfaces com `http://+:5310/`, mas o navegador deve acessá-lo por `http://localhost:5310`, pois `0.0.0.0` é endereço de escuta e não um destino HTTP válido.
 
-Execute `iniciar-cliente-agent.cmd` com duplo clique; ele solicita elevação uma única vez para reservar a porta `5310` no Windows e inicia o agente. Esse procedimento deve ser feito em cada computador remoto que será cadastrado. O erro `ERR_CONNECTION_REFUSED` em `http://0.0.0.0:5310/hardware` significa que o agente não está em execução naquela máquina.
+Execute `iniciar-cliente-agent.cmd` com duplo clique; ele solicita elevação uma única vez para reservar a porta `5310` no Windows e inicia o agente. Esse procedimento deve ser feito em cada computador remoto que será cadastrado. O erro `ERR_CONNECTION_REFUSED` em `http://localhost:5310/hardware` significa que o agente não está em execução naquela máquina.
 
 Use o botão **Cadastrar máquina e imprimir** no modal. Ele só conclui a operação depois de enviar a etiqueta e registrar a máquina no banco. O ID `HW-<ID_Equipamento>` evita duplicar o mesmo computador em novos atendimentos.
 
