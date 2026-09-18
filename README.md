@@ -102,12 +102,12 @@ Para que o modal leia o hardware da máquina que está usando o navegador, execu
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-powershell -ExecutionPolicy Bypass -File .\cliente-agent.ps1
+.\iniciar-cliente-agent.cmd
 ```
 
-O agente local fica em `http://localhost:5310`, coleta o hardware do cliente e também executa o `cliente.ps1` quando o botão de impressão é acionado. Sem o agente, o navegador não consegue permitir que o servidor remoto leia o hardware local.
+O agente local atende em `http://0.0.0.0:5310` (escuta todas as interfaces), coleta o hardware do cliente e também executa o `cliente.ps1` quando o botão de impressão é acionado. Sem o agente, o navegador não consegue permitir que o servidor remoto leia o hardware local.
 
-Como alternativa, execute `iniciar-cliente-agent.cmd` com duplo clique. Esse procedimento deve ser feito em cada computador remoto que será cadastrado. O erro `ERR_CONNECTION_REFUSED` em `http://localhost:5310/hardware` significa exatamente que o agente não está em execução naquela máquina.
+Execute `iniciar-cliente-agent.cmd` com duplo clique; ele solicita elevação uma única vez para reservar a porta `5310` no Windows e inicia o agente. Esse procedimento deve ser feito em cada computador remoto que será cadastrado. O erro `ERR_CONNECTION_REFUSED` em `http://0.0.0.0:5310/hardware` significa que o agente não está em execução naquela máquina.
 
 Use o botão **Cadastrar máquina e imprimir** no modal. Ele só conclui a operação depois de enviar a etiqueta e registrar a máquina no banco. O ID `HW-<ID_Equipamento>` evita duplicar o mesmo computador em novos atendimentos.
 

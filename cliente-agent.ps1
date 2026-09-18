@@ -5,7 +5,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $listener = New-Object System.Net.HttpListener
-$listener.Prefixes.Add("http://localhost:$Port/")
+$listener.Prefixes.Add("http://+:$Port/")
 $listener.Start()
 
 function Write-JsonResponse($context, $statusCode, $payload) {
