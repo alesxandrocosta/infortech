@@ -30,7 +30,7 @@ export default function LocalHardwareModal({ onClose, onRead, onSave, onPrint })
   const readLocal = async () => {
     setLoading(true);
     setMessage('Lendo configuração do localhost...');
-    try { setData(await onRead()); setMessage('Configuração lida. Revise os dados antes de salvar.'); } catch (error) { setMessage(error.message || 'Não foi possível ler o computador local.'); } finally { setLoading(false); }
+    try { setData(await onRead()); setMessage('Configuração desta máquina lida. Revise os dados antes de salvar.'); } catch (error) { setMessage(error.message || 'Inicie o cliente-agent.ps1 nesta máquina para ler o hardware local.'); } finally { setLoading(false); }
   };
 
   const addField = () => {
@@ -65,8 +65,8 @@ export default function LocalHardwareModal({ onClose, onRead, onSave, onPrint })
     <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div className="modal-panel hardware-modal" role="dialog" aria-modal="true" aria-labelledby="hardware-modal-title">
         <div className="modal-header"><div><span className="eyebrow">Inventário local</span><h2 id="hardware-modal-title">Ler configuração deste computador</h2></div><button className="ghost-button" type="button" onClick={onClose}>Fechar</button></div>
-        <p className="panel-subtitle">A leitura é feita pelo backend no Windows onde o sistema está executando. Confirme os dados antes de cadastrar.</p>
-        {!data && <button className="primary-button" type="button" onClick={readLocal} disabled={loading}>{loading ? 'Lendo...' : 'Ler configuração do localhost'}</button>}
+        <p className="panel-subtitle">A leitura é feita pelo agente local desta máquina, não pelo servidor. Inicie o cliente-agent.ps1 antes de ler.</p>
+        {!data && <button className="primary-button" type="button" onClick={readLocal} disabled={loading}>{loading ? 'Lendo máquina local...' : 'Ler configuração desta máquina'}</button>}
         {message && <p className="hardware-modal-message">{message}</p>}
         {data && <>
           <div className="hardware-modal-grid">{basicFields.map(([key, label]) => <label key={key}>{label}<input value={data[key] || ''} onChange={(event) => setData((current) => ({ ...current, [key]: event.target.value }))} /></label>)}</div>

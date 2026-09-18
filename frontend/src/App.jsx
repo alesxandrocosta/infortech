@@ -430,8 +430,10 @@ function App() {
   };
 
   const handleReadLocalHardware = async () => {
-    const response = await api.get('/inventory/hardware/local');
-    return response.data;
+    const response = await fetch('http://localhost:5310/hardware');
+    const payload = await response.json();
+    if (!response.ok || !payload?.success) throw new Error(payload?.error || 'Inicie o cliente-agent.ps1 nesta maquina.');
+    return payload.data;
   };
 
   const handleSaveLocalHardware = async (hardware) => {
@@ -449,9 +451,10 @@ function App() {
   };
 
   const handlePrintLocalHardware = async (hardware) => {
-    const response = await api.post('/inventory/hardware/local/print', hardware);
-    if (!response?.success) throw new Error('Nao foi possivel enviar a etiqueta para impressao.');
-    return response.data;
+    const response = await fetch('http://localhost:5310/print', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(hardware) });
+    const payload = await response.json();
+    if (!response.ok || !payload?.success) throw new Error(payload?.error || 'Nao foi possivel enviar a etiqueta para impressao.');
+    return payload.data;
   };
 
   const handleServiceSubmit = async (event) => {

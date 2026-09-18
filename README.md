@@ -98,6 +98,15 @@ O botão de impressão do modal de hardware gera uma única etiqueta `.docx` em 
 
 Para outro destino, configure `LABEL_OUTPUT_DIR` no `backend/.env`. A conta que executa o backend precisa ter permissão de gravação na pasta compartilhada.
 
+Para que o modal leia o hardware da máquina que está usando o navegador, execute nessa máquina cliente:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+powershell -ExecutionPolicy Bypass -File .\cliente-agent.ps1
+```
+
+O agente local fica em `http://localhost:5310`, coleta o hardware do cliente e também executa o `cliente.ps1` quando o botão de impressão é acionado. Sem o agente, o navegador não consegue permitir que o servidor remoto leia o hardware local.
+
 ### Cadastro e avisos por WhatsApp Web
 
 O cadastro de clientes possui telefone, WhatsApp, CEP, número da casa e endereço. O CEP é consultado automaticamente pelo ViaCEP.
