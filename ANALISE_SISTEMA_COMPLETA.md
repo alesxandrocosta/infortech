@@ -337,7 +337,7 @@ const token = jwt.sign(
 
 ```javascript
 {
-  id: 'demo-part-24',
+   id: 'part-24',
   codigo_sku: 'MON-LED-24IN',
   nome: 'Monitor 24"',
   categoria: 'Monitor',

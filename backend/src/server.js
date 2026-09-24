@@ -57,6 +57,25 @@ app.use(cors({
   },
   credentials: true,
 }));
+
+app.use((req, res, next) => {
+  const startTime = Date.now();
+  const originalSend = res.send.bind(res);
+
+  res.send = (...args) => {
+    const durationMs = Date.now() - startTime;
+    const ipAddress = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown';
+    const origin = req.headers.origin || 'direct';
+    const method = req.method;
+    const url = req.originalUrl;
+
+    console.log(`[REQ] ${method} ${url} | origin=${origin} | ip=${ipAddress} | status=${res.statusCode} | time=${durationMs}ms`);
+    return originalSend(...args);
+  };
+
+  next();
+});
+
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);

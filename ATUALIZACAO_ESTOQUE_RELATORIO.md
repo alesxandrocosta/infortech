@@ -135,10 +135,10 @@ PAD-GMR-RGB-8030| Gamer RGB XL 80x30cm    | R$  249  | 10 un
 - ✅ Novas categorias: Monitor, Smartphone, Fone, Mouse, Teclado, Mousepad
 - ✅ Comando executado: `ALTER TABLE product_parts MODIFY COLUMN categoria ENUM(...)`
 
-### 2. Atualização do Script de Seed
-- ✅ Adicionados 44 novos produtos ao array `parts` no `seed-demo-data.js`
-- ✅ Cada produto com: SKU único, nome, categoria, preço custo/venda, estoque, specs técnicas
-- ✅ Script utiliza `ON DUPLICATE KEY UPDATE` para idempotência
+### 2. Atualização do catálogo operacional
+- ✅ Produtos reais devem ser cadastrados pelo painel de estoque ou pela API
+- ✅ Cada produto deve possuir SKU único, nome, categoria, preço e especificações técnicas
+- ✅ O cadastro deve ser validado antes da entrada em produção
 
 ### 3. Arquivos Criados
 - ✅ `/infortec/backend/scripts/migrate-categories.js` - Script de migração do schema
@@ -146,7 +146,7 @@ PAD-GMR-RGB-8030| Gamer RGB XL 80x30cm    | R$  249  | 10 un
 
 ### 4. Arquivos Modificados
 - ✅ `/infortec/database/init.sql` - Atualizado ENUM de categoria
-- ✅ `/infortec/backend/scripts/seed-demo-data.js` - Adicionados 44 novos produtos
+- ✅ `/infortec/backend/scripts/check-products.js` - Verificação do catálogo
 
 ---
 
@@ -209,11 +209,6 @@ POST /api/inventory/:id/movements → Registrar movimento de estoque
 npm run check-products
 # ou
 node scripts/check-products.js
-```
-
-### Executar seed (adicionar/atualizar demo data)
-```bash
-npm run seed-demo-data
 ```
 
 ### Re-executar migração de schema

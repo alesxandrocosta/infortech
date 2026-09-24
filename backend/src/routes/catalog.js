@@ -103,7 +103,7 @@ router.post('/inventory/hardware/local/register', requireRoles('admin', 'gerente
 
   const sku = `HW-${equipmentId}`.slice(0, 50);
   const name = `${String(hardware.Fabricante || 'Computador').trim()} ${String(hardware.Modelo || 'identificado localmente').trim()}`.trim();
-  const specs = JSON.stringify({ ...hardware, origem: 'agente-local', cadastrado_por: req.user.id });
+  const specs = JSON.stringify({ ...hardware, origem: hardware.Origem_Leitura || 'agente-local', cadastrado_por: req.user.id });
   const existing = await queryOne('SELECT id FROM product_parts WHERE codigo_sku = ?', [sku]);
 
   if (existing) {

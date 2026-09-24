@@ -20,6 +20,11 @@ export default function LoginScreen({ onLogin, error, loading, onCustomerAccess 
         <p className="eyebrow">TechFlow ERP</p>
         <h1>Acesso ao sistema</h1>
         <p className="login-copy">Entre para acompanhar ordens, clientes e operações técnicas.</p>
+        <section className="login-hardware-section" aria-label="Importação de hardware">
+          <div><span className="eyebrow">Inventário</span><strong>Importar hardware desta máquina</strong></div>
+          <p>Baixe e execute o script PowerShell nesta máquina para enviar os dados reais ao inventário.</p>
+          <a className="secondary-button" href="/import-hardware-to-inventory.ps1" download>Baixar script PowerShell</a>
+        </section>
         <form className="login-form" onSubmit={handleSubmit}>
           <label>E-mail ou usuário<input name="email" type="text" value={form.email} onChange={handleChange} autoComplete="username" required /></label>
           <label>Senha<input name="password" type="password" value={form.password} onChange={handleChange} autoComplete="current-password" required /></label>

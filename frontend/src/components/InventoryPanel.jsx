@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import LocalHardwareModal from './LocalHardwareModal';
 
 const skuCatalog = [
   { sku: 'TEL-NB-14-HD', nome: 'Tela notebook 14 polegadas HD', categoria: 'Tela', specs: { tamanho: '14 polegadas', resolucao: 'HD' } },
@@ -18,9 +17,8 @@ const skuCatalog = [
 
 const categoryOptions = ['Tela', 'Placa-Mãe', 'Processador', 'Memória RAM', 'Bateria', 'Conector', 'Fonte', 'Adaptador', 'Insumo', 'Acessório', 'Monitor', 'Smartphone', 'Fone', 'Mouse', 'Teclado', 'Mousepad', 'Outro'];
 
-export default function InventoryPanel({ parts, form, editingId, onChange, onSubmit, onEdit, onDelete, onCancelEdit, onSell, onReadLocalHardware, onPrintLocalHardware, onRegisterAndPrintLocalHardware }) {
+export default function InventoryPanel({ parts, form, editingId, onChange, onSubmit, onEdit, onDelete, onCancelEdit, onSell, onReload }) {
   const [detailsItem, setDetailsItem] = useState(null);
-  const [hardwareModalOpen, setHardwareModalOpen] = useState(false);
   const [showMissingPrice, setShowMissingPrice] = useState(false);
   const selectedSku = skuCatalog.find((item) => item.sku === form.codigo);
   const specs = form.specs || {};
@@ -50,7 +48,7 @@ export default function InventoryPanel({ parts, form, editingId, onChange, onSub
         <button className={showMissingPrice ? 'primary-button' : 'secondary-button'} type="button" onClick={() => setShowMissingPrice((current) => !current)}>
           {showMissingPrice ? 'Ver todos' : `Preços pendentes (${missingPriceParts.length})`}
         </button>
-        <button className="primary-button" type="button" onClick={() => setHardwareModalOpen(true)}>Ler computador local</button>
+        <button className="secondary-button" type="button" onClick={onReload}>Atualizar lista</button>
       </div>
 
       <form className="entity-form" onSubmit={onSubmit}>
@@ -132,11 +130,10 @@ export default function InventoryPanel({ parts, form, editingId, onChange, onSub
                 </td>
               </tr>
             ))}
-            {!visibleParts.length && <tr><td colSpan="6"><p className="empty-state">Nenhum produto sem preço pendente.</p></td></tr>}
+            {!visibleParts.length && <tr><td colSpan="6"><p className="empty-state">{showMissingPrice ? 'Nenhum produto sem preço pendente.' : 'Nenhum item cadastrado no estoque.'}</p></td></tr>}
           </tbody>
         </table>
       </div>
-      {hardwareModalOpen && <LocalHardwareModal onClose={() => setHardwareModalOpen(false)} onRead={onReadLocalHardware} onPrint={onPrintLocalHardware} onRegisterAndPrint={onRegisterAndPrintLocalHardware} />}
       {detailsItem && <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setDetailsItem(null); }}><div className="modal-panel" role="dialog" aria-modal="true"><div className="modal-header"><div><span className="eyebrow">Detalhes do item</span><h2>{detailsItem.nome}</h2></div><button className="ghost-button" type="button" onClick={() => setDetailsItem(null)}>Fechar</button></div><div className="details-grid"><div><span className="eyebrow">SKU</span><strong>{detailsItem.codigo_sku || detailsItem.codigo}</strong></div><div><span className="eyebrow">Categoria</span><strong>{detailsItem.categoria}</strong></div><div><span className="eyebrow">Estoque atual</span><strong>{detailsItem.quantidade_estoque}</strong></div><div><span className="eyebrow">Estoque mínimo</span><strong>{detailsItem.quantidade_minima}</strong></div><div><span className="eyebrow">Preço de venda</span><strong>R$ {Number(detailsItem.preco_venda || detailsItem.preco || 0).toFixed(2)}</strong></div><div><span className="eyebrow">Condição</span><strong>{detailsItem.condicao || 'Nova'}</strong></div><div className="details-wide"><span className="eyebrow">Características técnicas</span><p>{detailsItem.technical_specs ? Object.entries(detailsItem.technical_specs).filter(([, value]) => value).map(([key, value]) => `${key}: ${value}`).join(' · ') : 'Não informado'}</p></div><div className="details-wide"><span className="eyebrow">Movimentações</span><p>{detailsItem.movements?.length ? detailsItem.movements.map((movement) => `${movement.origem} · ${movement.responsavel_nome} · ${new Date(movement.occurred_at).toLocaleString('pt-BR')} · R$ ${Number(movement.valor || 0).toFixed(2)}`).join('\n') : 'Nenhuma saída registrada.'}</p></div></div><div className="form-actions"><button className="primary-button" type="button" onClick={async () => { await onSell(detailsItem); setDetailsItem(null); }}>Registrar venda</button></div></div></div>}
     </section>
   );

@@ -11,7 +11,6 @@
     "create-admin": "node scripts/create-production-admin.js",
     "migrate-sales": "node scripts/migrate-sales.js",
     "populate-stock": "node scripts/populate-stock.js",
-    "seed-demo-data": "node scripts/seed-demo-data.js",
     "test": "jest --coverage",
     "lint": "eslint src/"
   },

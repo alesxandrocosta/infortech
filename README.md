@@ -98,18 +98,14 @@ O botão de impressão do modal de hardware gera uma única etiqueta `.docx` em 
 
 Para outro destino, configure `LABEL_OUTPUT_DIR` no `backend/.env`. A conta que executa o backend precisa ter permissão de gravação na pasta compartilhada.
 
-Para que o modal leia o hardware da máquina que está usando o navegador, execute nessa máquina cliente:
+Para importar o hardware real da máquina cliente, baixe o [import-hardware-to-inventory.ps1](frontend/public/import-hardware-to-inventory.ps1) pela tela de login ou execute o script diretamente nessa máquina:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
-.\iniciar-cliente-agent.cmd
+\.\scripts\import-hardware-to-inventory.ps1 -ApiUrl "http://IP-DO-SERVIDOR:5000/api" -Email "usuario@dominio.com"
 ```
 
-O agente local escuta todas as interfaces com `http://+:5310/`, mas o navegador deve acessá-lo por `http://localhost:5310`, pois `0.0.0.0` é endereço de escuta e não um destino HTTP válido.
-
-Execute `iniciar-cliente-agent.cmd` com duplo clique; ele solicita elevação uma única vez para reservar a porta `5310` no Windows e inicia o agente. Esse procedimento deve ser feito em cada computador remoto que será cadastrado. O erro `ERR_CONNECTION_REFUSED` em `http://localhost:5310/hardware` significa que o agente não está em execução naquela máquina.
-
-Use o botão **Cadastrar máquina e imprimir** no modal. Ele só conclui a operação depois de enviar a etiqueta e registrar a máquina no banco. O ID `HW-<ID_Equipamento>` evita duplicar o mesmo computador em novos atendimentos.
+O script coleta o hardware com CIM/PowerShell na máquina cliente e envia os dados autenticados para a API. Depois da execução, use **Atualizar lista** no estoque. O ID `HW-<ID_Equipamento>` evita duplicar o mesmo computador em novas importações.
 
 ### Cadastro e avisos por WhatsApp Web
 
@@ -166,7 +162,7 @@ Este script vai:
 - ✓ Verificar conexão com MySQL
 - ✓ Criar o banco `bd_infortec` (se não existir)
 - ✓ Criar todas as 16 tabelas (com estrutura completa)
-- ✓ Inserir dados de exemplo
+- ✓ Cadastrar dados reais da operação
 - ✓ Validar a estrutura final
 
 **Saída esperada:**

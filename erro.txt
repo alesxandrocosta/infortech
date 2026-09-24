@@ -1,0 +1,67 @@
+Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+App.jsx:593  GET http://127.0.0.1:5310/specs net::ERR_CONNECTION_REFUSED
+(anonymous) @ App.jsx:593
+(anonymous) @ LocalHardwareModal.jsx:30
+executeDispatch @ react-dom_client.js?v=200d2d05:9141
+runWithFiberInDEV @ react-dom_client.js?v=200d2d05:851
+processDispatchQueue @ react-dom_client.js?v=200d2d05:9167
+(anonymous) @ react-dom_client.js?v=200d2d05:9454
+batchedUpdates$1 @ react-dom_client.js?v=200d2d05:2044
+dispatchEventForPluginEventSystem @ react-dom_client.js?v=200d2d05:9240
+dispatchEvent @ react-dom_client.js?v=200d2d05:11319
+dispatchDiscreteEvent @ react-dom_client.js?v=200d2d05:11301
+<button>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=9010f6d3:193
+(anonymous) @ LocalHardwareModal.jsx:70
+react_stack_bottom_frame @ react-dom_client.js?v=200d2d05:12866
+renderWithHooksAgain @ react-dom_client.js?v=200d2d05:4268
+renderWithHooks @ react-dom_client.js?v=200d2d05:4219
+updateFunctionComponent @ react-dom_client.js?v=200d2d05:5569
+beginWork @ react-dom_client.js?v=200d2d05:6140
+runWithFiberInDEV @ react-dom_client.js?v=200d2d05:851
+performUnitOfWork @ react-dom_client.js?v=200d2d05:8429
+workLoopSync @ react-dom_client.js?v=200d2d05:8325
+renderRootSync @ react-dom_client.js?v=200d2d05:8309
+performWorkOnRoot @ react-dom_client.js?v=200d2d05:7957
+performSyncWorkOnRoot @ react-dom_client.js?v=200d2d05:9067
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=200d2d05:8984
+processRootScheduleInMicrotask @ react-dom_client.js?v=200d2d05:9005
+(anonymous) @ react-dom_client.js?v=200d2d05:9078
+<LocalHardwareModal>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=9010f6d3:193
+(anonymous) @ InventoryPanel.jsx:139
+react_stack_bottom_frame @ react-dom_client.js?v=200d2d05:12866
+renderWithHooksAgain @ react-dom_client.js?v=200d2d05:4268
+renderWithHooks @ react-dom_client.js?v=200d2d05:4219
+updateFunctionComponent @ react-dom_client.js?v=200d2d05:5569
+beginWork @ react-dom_client.js?v=200d2d05:6140
+runWithFiberInDEV @ react-dom_client.js?v=200d2d05:851
+performUnitOfWork @ react-dom_client.js?v=200d2d05:8429
+workLoopSync @ react-dom_client.js?v=200d2d05:8325
+renderRootSync @ react-dom_client.js?v=200d2d05:8309
+performWorkOnRoot @ react-dom_client.js?v=200d2d05:7957
+performSyncWorkOnRoot @ react-dom_client.js?v=200d2d05:9067
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=200d2d05:8984
+processRootScheduleInMicrotask @ react-dom_client.js?v=200d2d05:9005
+(anonymous) @ react-dom_client.js?v=200d2d05:9078
+<InventoryPanel>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=9010f6d3:193
+App @ App.jsx:917
+react_stack_bottom_frame @ react-dom_client.js?v=200d2d05:12866
+renderWithHooksAgain @ react-dom_client.js?v=200d2d05:4268
+renderWithHooks @ react-dom_client.js?v=200d2d05:4219
+updateFunctionComponent @ react-dom_client.js?v=200d2d05:5569
+beginWork @ react-dom_client.js?v=200d2d05:6140
+runWithFiberInDEV @ react-dom_client.js?v=200d2d05:851
+performUnitOfWork @ react-dom_client.js?v=200d2d05:8429
+workLoopSync @ react-dom_client.js?v=200d2d05:8325
+renderRootSync @ react-dom_client.js?v=200d2d05:8309
+performWorkOnRoot @ react-dom_client.js?v=200d2d05:7957
+performSyncWorkOnRoot @ react-dom_client.js?v=200d2d05:9067
+flushSyncWorkAcrossRoots_impl @ react-dom_client.js?v=200d2d05:8984
+processRootScheduleInMicrotask @ react-dom_client.js?v=200d2d05:9005
+(anonymous) @ react-dom_client.js?v=200d2d05:9078
+<App>
+exports.jsxDEV @ react_jsx-dev-runtime.js?v=9010f6d3:193
+(anonymous) @ main.jsx:8
+App.jsx:602  GET http://127.0.0.1:5310/hardware net::ERR_CONNECTION_REFUSED
